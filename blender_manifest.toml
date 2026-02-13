@@ -1,0 +1,14 @@
+schema_version = "1.0.0"
+id = "mavhod_tool"
+version = "1.0.0"
+name = "Mavhod Tool"
+tagline = "Tools for importing FBX/GLTF with FePBR materials and mesh arrangement"
+type = "add-on"
+tags = ["Import-Export"]
+blender_version_min = "4.2.0"
+license = ["SPDX:GPL-2.0-or-later"]
+maintainer = "mavhod realhod"
+website = "https://???"
+copyright = ["2024 mavhod realhod"]
+[permissions]
+files = "Requires access to directory"
