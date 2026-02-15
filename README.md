@@ -17,6 +17,11 @@ A Blender addon for improved asset workflow, specifically designed for importing
 ### 3. Mesh Arrangement
 - **Auto-Arrange**: Tools to arrange imported meshes in the scene (via `arrange_meshes.py`).
 
+### 4. Convex Hull Creation
+- **Create Convex Hull**: Generate collision meshes (UCX) for selected objects via the N-Panel > Mavhod tab.
+- **Customizable**: Set decimation ratio (LOD) and naming suffix (default: `_UCX`).
+- **Batch Processing**: Works on multiple selected objects simultaneously.
+
 ## Installation
 
 1. Download the repository or the release `.zip` file.

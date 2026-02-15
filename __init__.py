@@ -26,13 +26,16 @@ if "bpy" in locals():
 	from . import import_fbx
 	from . import import_gltf
 	from . import arrange_meshes
+	from . import create_convex
 	imp.reload(import_fbx)
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
+	imp.reload(create_convex)
 else:
 	from . import import_fbx
 	from . import import_gltf
 	from . import arrange_meshes
+	from . import create_convex
 
 import bpy
 
@@ -69,6 +72,7 @@ class MavhodToolPanel(bpy.types.Panel):
 		
 		col = box.column(align=True)
 		col.operator("test_addon.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
+		col.operator("test_addon.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
 
 classes = (
 	FBXFileItem,
@@ -76,6 +80,7 @@ classes = (
 	import_fbx.ImportFBXFiles,
 	import_gltf.ImportGLTFFiles,
 	arrange_meshes.ArrangeSelectedMeshes,
+	create_convex.CreateConvexHull,
 	MavhodToolPanel,
 )
 
