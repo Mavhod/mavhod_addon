@@ -18,8 +18,3 @@ func _exit_tree() -> void:
 	if dock:
 		remove_control_from_docks(dock)
 		dock.queue_free()
-
-
-func _on_blend_file_selected(_path: String) -> void:
-	# Keep this function for future use when we reintegrate line extraction
-	pass

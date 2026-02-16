@@ -1,23 +1,111 @@
-[gd_scene format=3 uid="uid://dq5txlhnn2vrj"]
+[gd_scene format=3 uid="uid://dqdhl3s7arq70"]
 
-[node name="AssetManagerDialog" type="Window" unique_id=494216698]
+[sub_resource type="LabelSettings" id="LabelSettings_1imsw"]
+
+[node name="AssetManagerDialog" type="Window" unique_id=712087765]
 oversampling_override = 1.0
 title = "Mavhod Asset Manager"
-size = Vector2i(500, 300)
-min_size = Vector2i(400, 200)
+position = Vector2i(0, 36)
+size = Vector2i(600, 400)
+min_size = Vector2i(400, 300)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1955272631]
+[node name="TabContainer" type="TabContainer" parent="." unique_id=402279318]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+current_tab = 1
+
+[node name="Main" type="Control" parent="TabContainer" unique_id=558370343]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Main" unique_id=879804874]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="InfoLabel" type="Label" parent="TabContainer/Main/VBoxContainer" unique_id=875213195]
+layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
+text = "Asset management features from Blender to Godot will be implemented here.
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=757235491]
+This tool will help manage meshes, materials, and textures extracted from your .blend files."
+label_settings = SubResource("LabelSettings_1imsw")
+autowrap_mode = 3
+
+[node name="Settings" type="Control" parent="TabContainer" unique_id=470262230]
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Settings" unique_id=1253282778]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
+
+[node name="GridContainer" type="GridContainer" parent="TabContainer/Settings/VBoxContainer" unique_id=1307131211]
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="BlenderAssetsPathLabel" type="Label" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=1729519089]
+layout_mode = 2
+text = "Blender Assets Path:"
+
+[node name="BlenderAssetsPathEdit" type="LineEdit" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=464609843]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+placeholder_text = "/path/to/blender/assets/"
+
+[node name="BlenderScenesPathLabel" type="Label" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=1299829241]
+layout_mode = 2
+text = "Blender Scenes Path:"
+
+[node name="BlenderScenesPathEdit" type="LineEdit" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=1824902745]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+placeholder_text = "/path/to/blender/scenes/"
+
+[node name="GodotAssetsPathLabel" type="Label" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=1528410640]
+layout_mode = 2
+text = "Godot Assets Path:"
+
+[node name="GodotAssetsPathEdit" type="LineEdit" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=544567663]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+placeholder_text = "res://assets/"
+
+[node name="GodotScenesPathLabel" type="Label" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=818864265]
+layout_mode = 2
+text = "Godot Scenes Path:"
+
+[node name="GodotScenesPathEdit" type="LineEdit" parent="TabContainer/Settings/VBoxContainer/GridContainer" unique_id=2039126660]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+placeholder_text = "res://scenes/"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TabContainer/Settings/VBoxContainer" unique_id=1217319293]
 layout_mode = 2
 size_flags_horizontal = 3
-alignment = 2
 
-[node name="Spacer" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=74924008]
+[node name="Spacer" type="Control" parent="TabContainer/Settings/VBoxContainer/HBoxContainer" unique_id=1755247686]
+custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="CloseButton" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=34855234]
+[node name="SaveButton" type="Button" parent="TabContainer/Settings/VBoxContainer/HBoxContainer" unique_id=1352481847]
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-text = "Close"
+text = "Save Settings"
