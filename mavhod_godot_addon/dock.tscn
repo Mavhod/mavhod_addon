@@ -21,6 +21,6 @@ layout_mode = 2
 text = "Mavhod Tools"
 horizontal_alignment = 1
 
-[node name="TestButton" type="Button" parent="VBoxContainer" unique_id=-1311221684]
+[node name="AssetManagerButton" type="Button" parent="VBoxContainer" unique_id=-1311221684]
 layout_mode = 2
-text = "Test Button"
+text = "Manage Blender Assets"

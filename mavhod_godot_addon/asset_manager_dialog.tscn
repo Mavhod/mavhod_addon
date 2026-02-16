@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://dq5txlhnn2vrj"]
+
+[node name="AssetManagerDialog" type="Window" unique_id=494216698]
+oversampling_override = 1.0
+title = "Mavhod Asset Manager"
+size = Vector2i(500, 300)
+min_size = Vector2i(400, 200)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1955272631]
+size_flags_vertical = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=757235491]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 2
+
+[node name="Spacer" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=74924008]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=34855234]
+layout_mode = 2
+text = "Close"
