@@ -2,6 +2,7 @@
 extends RefCounted
 
 const CONFIG_PATH = "user://mavhod_config.cfg"
+static var file_dialog: FileDialog
 
 static func show_dialog() -> void:
 	print("Mavhod: Asset Manager button pressed.")
@@ -16,6 +17,10 @@ static func show_dialog() -> void:
 	var save_button = asset_dialog.get_node("TabContainer/Settings/VBoxContainer/HBoxContainer/SaveButton")
 	save_button.pressed.connect(func(): _on_save_settings_pressed(asset_dialog))
 
+	# Connect the Import Scene button
+	var import_scene_button = asset_dialog.get_node("TabContainer/Main/VBoxContainer/ImportSceneButton")
+	import_scene_button.pressed.connect(func(): _on_import_scene_pressed())
+
 	# Load settings when dialog is shown
 	_load_settings(asset_dialog)
 
@@ -24,6 +29,38 @@ static func show_dialog() -> void:
 	asset_dialog.popup_centered()
 
 	print("Mavhod: Dialog should be visible now.")
+
+static func _on_import_scene_pressed() -> void:
+	# Create and show a file dialog to select .blend files
+	file_dialog = FileDialog.new()
+	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	file_dialog.add_filter("*.blend", "Blender Files")
+	file_dialog.title = "Select .blend file"
+	file_dialog.access = FileDialog.ACCESS_FILESYSTEM # Allow access outside project
+	
+	file_dialog.file_selected.connect(_on_blend_file_selected)
+	file_dialog.canceled.connect(_on_dialog_closed)
+	
+	# Show the dialog
+	EditorInterface.get_base_control().add_child(file_dialog)
+	file_dialog.popup_centered_ratio(0.5)
+
+static func _on_blend_file_selected(path: String) -> void:
+	var blender_path = EditorInterface \
+		.get_editor_settings() \
+		.get_setting("filesystem/import/blender/blender_path")
+	print("Selected .blend file: ", path)
+	print("blender_path: ", blender_path)
+	if blender_path != "":
+		var output = []
+		OS.execute(blender_path, ["--version"], output)
+		print(output)
+	# Clean up the dialog
+	file_dialog.queue_free()
+
+static func _on_dialog_closed() -> void:
+	# Clean up the dialog if cancelled
+	if file_dialog: file_dialog.queue_free();
 
 
 static func _on_save_settings_pressed(dialog: Window) -> void:

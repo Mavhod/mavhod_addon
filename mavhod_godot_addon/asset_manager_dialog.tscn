@@ -15,10 +15,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-current_tab = 1
+current_tab = 0
 
 [node name="Main" type="Control" parent="TabContainer" unique_id=558370343]
-visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
@@ -41,7 +40,13 @@ This tool will help manage meshes, materials, and textures extracted from your .
 label_settings = SubResource("LabelSettings_1imsw")
 autowrap_mode = 3
 
+[node name="ImportSceneButton" type="Button" parent="TabContainer/Main/VBoxContainer" unique_id=892341567]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Import Scene"
+
 [node name="Settings" type="Control" parent="TabContainer" unique_id=470262230]
+visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
