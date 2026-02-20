@@ -27,15 +27,18 @@ if "bpy" in locals():
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
+	from . import export_scene
 	imp.reload(import_fbx)
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
 	imp.reload(create_convex)
+	imp.reload(export_scene)
 else:
 	from . import import_fbx
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
+	from . import export_scene
 
 import bpy
 
@@ -45,6 +48,18 @@ class FBXFileItem(bpy.types.PropertyGroup):
 class TestAddonSceneProps(bpy.types.PropertyGroup):
 	entryPath: bpy.props.StringProperty(default="..")
 	savePoint: bpy.props.StringProperty(default=".")
+	exportAssetPath: bpy.props.StringProperty(
+		name="Export Asset Path",
+		description="Path for exporting assets",
+		default="",
+		subtype='DIR_PATH'
+	)
+	exportScenePath: bpy.props.StringProperty(
+		name="Export Scene Path",
+		description="Path for exporting scenes",
+		default="",
+		subtype='DIR_PATH'
+	)
 	fbx_files: bpy.props.CollectionProperty(type=FBXFileItem)
 
 class MavhodToolPanel(bpy.types.Panel):
@@ -74,6 +89,11 @@ class MavhodToolPanel(bpy.types.Panel):
 		col.operator("test_addon.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
 		col.operator("test_addon.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
 
+		# ========== EXPORT SECTION ==========
+		box = layout.box()
+		box.label(text="Export Settings", icon="EXPORT")
+		box.operator("test_addon.export_settings", text="Set Export Paths", icon="SETTINGS")
+
 classes = (
 	FBXFileItem,
 	TestAddonSceneProps,
@@ -81,6 +101,8 @@ classes = (
 	import_gltf.ImportGLTFFiles,
 	arrange_meshes.ArrangeSelectedMeshes,
 	create_convex.CreateConvexHull,
+	export_scene.MavhodExportSettings,
+	export_scene.MavhodExportExecute,
 	MavhodToolPanel,
 )
 

@@ -33,17 +33,34 @@ theme_override_constants/separation = 10
 [node name="InfoLabel" type="Label" parent="TabContainer/Main/VBoxContainer" unique_id=875213195]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
-text = "Asset management features from Blender to Godot will be implemented here.
-
-This tool will help manage meshes, materials, and textures extracted from your .blend files."
+text = "Select a .blend file to view its meshes."
 label_settings = SubResource("LabelSettings_1imsw")
 autowrap_mode = 3
 
-[node name="ImportSceneButton" type="Button" parent="TabContainer/Main/VBoxContainer" unique_id=892341567]
+[node name="MeshListContainer" type="VBoxContainer" parent="TabContainer/Main/VBoxContainer" unique_id=892341568]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MeshListLabel" type="Label" parent="TabContainer/Main/VBoxContainer/MeshListContainer" unique_id=892341569]
+layout_mode = 2
+text = "Meshes:"
+
+[node name="MeshList" type="ItemList" parent="TabContainer/Main/VBoxContainer/MeshListContainer" unique_id=892341570]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TabContainer/Main/VBoxContainer" unique_id=892341571]
+layout_mode = 2
+
+[node name="ImportSceneButton" type="Button" parent="TabContainer/Main/VBoxContainer/HBoxContainer" unique_id=892341567]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Import Scene"
+
+[node name="RefreshButton" type="Button" parent="TabContainer/Main/VBoxContainer/HBoxContainer" unique_id=892341572]
+layout_mode = 2
+text = "Refresh"
 
 [node name="Settings" type="Control" parent="TabContainer" unique_id=470262230]
 visible = false
