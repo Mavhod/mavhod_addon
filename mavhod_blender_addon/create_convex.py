@@ -3,7 +3,7 @@ import bmesh
 
 class CreateConvexHull(bpy.types.Operator):
     """Create a convex hull mesh from the selected objects."""
-    bl_idname = "test_addon.create_convex_hull"
+    bl_idname = "mavhod_tool.create_convex_hull"
     bl_label = "Create Convex Hull"
     bl_options = {'REGISTER', 'UNDO'}
 

@@ -5,14 +5,14 @@ import shutil
 
 
 class MavhodExportSettings(bpy.types.Operator):
-	"""Set export paths and start export"""
-	bl_idname = "test_addon.export_settings"
-	bl_label = "Set Export Paths"
+	"""Open dialog to export the current scene"""
+	bl_idname = "mavhod_tool.export_settings"
+	bl_label = "Export Scene"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
 		# Kick off the modal export operator
-		bpy.ops.test_addon.export_execute('INVOKE_DEFAULT')
+		bpy.ops.mavhod_tool.export_execute('INVOKE_DEFAULT')
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -20,14 +20,14 @@ class MavhodExportSettings(bpy.types.Operator):
 
 	def draw(self, context):
 		layout = self.layout
-		props = context.scene.TestAddonProps
+		props = context.scene.MavhodToolProps
 		layout.prop(props, "exportAssetPath")
 		layout.prop(props, "exportScenePath")
 
 
 class MavhodExportExecute(bpy.types.Operator):
 	"""Modal export operator that processes one mesh per tick for visible progress"""
-	bl_idname = "test_addon.export_execute"
+	bl_idname = "mavhod_tool.export_execute"
 	bl_label = "Exporting..."
 	bl_options = set()
 
@@ -192,7 +192,7 @@ class MavhodExportExecute(bpy.types.Operator):
 		return {'PASS_THROUGH'}
 
 	def invoke(self, context, event):
-		props = context.scene.TestAddonProps
+		props = context.scene.MavhodToolProps
 		self._export_scene_path = bpy.path.abspath(props.exportScenePath)
 		self._export_asset_path = bpy.path.abspath(props.exportAssetPath) if props.exportAssetPath else ""
 

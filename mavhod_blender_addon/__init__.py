@@ -45,7 +45,7 @@ import bpy
 class FBXFileItem(bpy.types.PropertyGroup):
 	filepath: bpy.props.StringProperty(name="File Path")
 
-class TestAddonSceneProps(bpy.types.PropertyGroup):
+class MavhodToolSceneProps(bpy.types.PropertyGroup):
 	entryPath: bpy.props.StringProperty(default="..")
 	savePoint: bpy.props.StringProperty(default=".")
 	exportAssetPath: bpy.props.StringProperty(
@@ -78,25 +78,25 @@ class MavhodToolPanel(bpy.types.Panel):
 		box.label(text="Import", icon="IMPORT")
 		
 		col = box.column(align=True)
-		col.operator("test_addon.import_fbx_files", text="Import FBX", icon="FILE_3D")
-		col.operator("test_addon.import_gltf_files", text="Import GLTF/GLB", icon="FILE_3D")
+		col.operator("mavhod_tool.import_fbx_files", text="Import FBX", icon="FILE_3D")
+		col.operator("mavhod_tool.import_gltf_files", text="Import GLTF/GLB", icon="FILE_3D")
 		
+		# ========== EXPORT SECTION ==========
+		box = layout.box()
+		box.label(text="Export", icon="EXPORT")
+		box.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
+
 		# ========== MESH TOOLS SECTION ==========
 		box = layout.box()
 		box.label(text="Mesh Tools", icon="MESH_DATA")
 		
 		col = box.column(align=True)
-		col.operator("test_addon.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
-		col.operator("test_addon.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
-
-		# ========== EXPORT SECTION ==========
-		box = layout.box()
-		box.label(text="Export Settings", icon="EXPORT")
-		box.operator("test_addon.export_settings", text="Set Export Paths", icon="SETTINGS")
+		col.operator("mavhod_tool.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
+		col.operator("mavhod_tool.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
 
 classes = (
 	FBXFileItem,
-	TestAddonSceneProps,
+	MavhodToolSceneProps,
 	import_fbx.ImportFBXFiles,
 	import_gltf.ImportGLTFFiles,
 	arrange_meshes.ArrangeSelectedMeshes,
@@ -108,7 +108,7 @@ classes = (
 
 def register():
 	for cls in classes: bpy.utils.register_class(cls);
-	bpy.types.Scene.TestAddonProps = bpy.props.PointerProperty(type=TestAddonSceneProps)
+	bpy.types.Scene.MavhodToolProps = bpy.props.PointerProperty(type=MavhodToolSceneProps)
 
 def unregister():
 	for cls in classes: bpy.utils.unregister_class(cls);

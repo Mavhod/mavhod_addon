@@ -2,7 +2,7 @@ import bpy
 import os
 
 class ImportFBXFiles(bpy.types.Operator):
-	bl_idname = "test_addon.import_fbx_files"
+	bl_idname = "mavhod_tool.import_fbx_files"
 	bl_label = "Import FBX Files"
 	bl_description = "Select and import multiple FBX files"
 	
@@ -41,22 +41,22 @@ class ImportFBXFiles(bpy.types.Operator):
 	
 	def execute(self, context):
 		# Clear existing files
-		context.scene.TestAddonProps.fbx_files.clear()
+		context.scene.MavhodToolProps.fbx_files.clear()
 		
 		# Add selected files to the collection and print full path
 		print("\n=== Selected FBX Files ===")
 		for file in self.files:
 			if file.name.lower().endswith('.fbx'):
-				item = context.scene.TestAddonProps.fbx_files.add()
+				item = context.scene.MavhodToolProps.fbx_files.add()
 				full_path = os.path.join(self.directory, file.name)
 				item.filepath = full_path
 				print(full_path)
-		print(f"=== Total: {len(context.scene.TestAddonProps.fbx_files)} file(s) ===\n")
+		print(f"=== Total: {len(context.scene.MavhodToolProps.fbx_files)} file(s) ===\n")
 		
 		# Import all FBX files into the scene
 		imported_count = 0
 		print("=== Importing FBX Files ===")
-		for item in context.scene.TestAddonProps.fbx_files:
+		for item in context.scene.MavhodToolProps.fbx_files:
 			try:
 				# Get objects before import
 				objects_before = set(context.scene.objects)
@@ -87,9 +87,9 @@ class ImportFBXFiles(bpy.types.Operator):
 			except Exception as e:
 				print(f"✗ Failed to import {item.filepath}: {str(e)}")
 		
-		print(f"\n=== Successfully imported {imported_count}/{len(context.scene.TestAddonProps.fbx_files)} file(s) ===\n")
+		print(f"\n=== Successfully imported {imported_count}/{len(context.scene.MavhodToolProps.fbx_files)} file(s) ===\n")
 		
-		self.report({'INFO'}, f"Imported {imported_count}/{len(context.scene.TestAddonProps.fbx_files)} FBX file(s)")
+		self.report({'INFO'}, f"Imported {imported_count}/{len(context.scene.MavhodToolProps.fbx_files)} FBX file(s)")
 		return {'FINISHED'}
 	
 	def invoke(self, context, event):

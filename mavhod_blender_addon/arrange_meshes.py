@@ -3,7 +3,7 @@ import math
 import mathutils
 
 class ArrangeSelectedMeshes(bpy.types.Operator):
-	bl_idname = "test_addon.arrange_selected_meshes"
+	bl_idname = "mavhod_tool.arrange_selected_meshes"
 	bl_label = "Arrange Selected Meshes"
 	bl_description = "Arrange selected meshes in a grid layout without overlapping"
 	bl_options = {'REGISTER', 'UNDO'}

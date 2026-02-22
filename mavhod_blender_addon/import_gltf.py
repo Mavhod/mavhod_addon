@@ -2,7 +2,7 @@ import bpy
 import os
 
 class ImportGLTFFiles(bpy.types.Operator):
-	bl_idname = "test_addon.import_gltf_files"
+	bl_idname = "mavhod_tool.import_gltf_files"
 	bl_label = "Import GLTF Files"
 	bl_description = "Select and import multiple GLTF/GLB files"
 	
