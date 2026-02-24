@@ -66,6 +66,13 @@ class MavhodToolSceneProps(bpy.types.PropertyGroup):
 		default="",
 		subtype='DIR_PATH'
 	)
+	export_albedo: bpy.props.BoolProperty(name="Albedo", default=True)
+	export_metallic: bpy.props.BoolProperty(name="Metallic", default=True)
+	export_roughness: bpy.props.BoolProperty(name="Roughness", default=True)
+	export_normal: bpy.props.BoolProperty(name="Normal", default=True)
+	export_emission: bpy.props.BoolProperty(name="Emission", default=True)
+	export_alpha: bpy.props.BoolProperty(name="Alpha", default=True)
+	export_ao: bpy.props.BoolProperty(name="AO", default=True)
 	fbx_files: bpy.props.CollectionProperty(type=FBXFileItem)
 
 class MavhodToolPanel(bpy.types.Panel):

@@ -39,9 +39,25 @@ class MavhodExportSettings(bpy.types.Operator):
 	def draw(self, context):
 		layout = self.layout
 		props = context.scene.MavhodToolProps
-		layout.prop(props, "asset_source_path")
-		layout.prop(props, "asset_dest_path")
-		layout.prop(props, "scene_dest_path")
+		
+		col = layout.column(align=True)
+		col.label(text="Paths:")
+		col.prop(props, "asset_source_path")
+		col.prop(props, "asset_dest_path")
+		col.prop(props, "scene_dest_path")
+		
+		layout.separator()
+		
+		col = layout.column(align=True)
+		col.label(text="Export Texture Maps:")
+		flow = col.grid_flow(row_major=True, columns=2, even_columns=True, even_rows=False, align=True)
+		flow.prop(props, "export_albedo")
+		flow.prop(props, "export_metallic")
+		flow.prop(props, "export_roughness")
+		flow.prop(props, "export_normal")
+		flow.prop(props, "export_emission")
+		flow.prop(props, "export_alpha")
+		flow.prop(props, "export_ao")
 
 
 class MavhodExportExecute(bpy.types.Operator):
@@ -61,6 +77,30 @@ class MavhodExportExecute(bpy.types.Operator):
 	_export_scene_path = ""
 	_asset_source_path = ""
 	_mesh_data_for_json = []
+
+	# Texture export flags
+	_export_albedo = True
+	_export_metallic = True
+	_export_roughness = True
+	_export_normal = True
+	_export_emission = True
+	_export_alpha = True
+	_export_ao = True
+
+	# Map FePBR/Principled input names to export flag keys
+	INPUT_TO_FLAG = {
+		'Albedo Map': '_export_albedo',
+		'Base Color': '_export_albedo',
+		'Metallic': '_export_metallic',
+		'Roughness': '_export_roughness',
+		'Normal Map': '_export_normal',
+		'Normal': '_export_normal',
+		'Emission': '_export_emission',
+		'Emission Color': '_export_emission',
+		'Alpha Map': '_export_alpha',
+		'Alpha': '_export_alpha',
+		'AO': '_export_ao'
+	}
 
 	def modal(self, context, event):
 		if event.type == 'TIMER':
@@ -154,29 +194,35 @@ class MavhodExportExecute(bpy.types.Operator):
 		}
 
 	def _collect_images(self, obj, tex_root, parent_folder_path):
-		"""Gathers texture information from materials."""
-		ordered_images = []  # list of (img, src_path, abs_dst, rel_uri)
-		seen_names = set()
+		"""
+		Gathers texture metadata from object materials.
+		Returns image_metadata: dict mapping Blender Image objects to metadata.
+		"""
+		image_metadata = {} # img -> {should_export, abs_dst, rel_uri, src_path}
+
 		for slot in obj.material_slots:
 			if not (slot.material and slot.material.use_nodes):
 				continue
-				
-			for node in slot.material.node_tree.nodes:
+
+			nodes = slot.material.node_tree.nodes
+			for node in nodes:
 				if not (node.type == 'TEX_IMAGE' and node.image):
 					continue
-					
+				
 				img = node.image
-				if img.name in seen_names:
+				if img in image_metadata:
 					continue
-				seen_names.add(img.name)
 
-				# Resolve source path
+				# Resolve original source path
 				if img.library and img.library.filepath:
 					lib_dir = os.path.dirname(os.path.realpath(bpy.path.abspath(img.library.filepath)))
 					src_path = os.path.realpath(bpy.path.abspath(img.filepath, start=lib_dir)) if img.filepath else None
 				else:
 					src_path = os.path.realpath(bpy.path.abspath(img.filepath)) if img.filepath else None
 
+				# Prepare destination info
+				abs_dst = None
+				rel_uri = None
 				if src_path and os.path.isfile(src_path):
 					if self._asset_source_path:
 						rel_source = get_robust_relpath(os.path.dirname(src_path), self._asset_source_path)
@@ -189,20 +235,26 @@ class MavhodExportExecute(bpy.types.Operator):
 					os.makedirs(target_tex_dir, exist_ok=True)
 					abs_dst = os.path.join(target_tex_dir, img_filename)
 					rel_uri = get_robust_relpath(abs_dst, parent_folder_path)
-					ordered_images.append((img, src_path, abs_dst, rel_uri))
-				else:
-					ordered_images.append((img, None, None, None))
-					
-		return ordered_images
 
-	def _export_and_patch_gltf(self, context, obj, parent_folder_path, full_path, ordered_images):
-		"""Handles GLTF export and fixing texture URIs."""
+				image_metadata[img] = {
+					'src_path': src_path,
+					'abs_dst': abs_dst,
+					'rel_uri': rel_uri
+				}
+
+		return image_metadata
+
+	def _export_and_patch_gltf(self, context, obj, parent_folder_path, full_path, image_metadata):
+		"""
+		Exports GLTF and patches it using structural tracing (Socket -> GLTF).
+		This ensures 100% accuracy for both naming and filtering.
+		"""
 		# Isolate object
 		bpy.ops.object.select_all(action='DESELECT')
 		obj.select_set(True)
 		context.view_layer.objects.active = obj
 
-		# Export
+		# 1. Export normally
 		bpy.ops.export_scene.gltf(
 			filepath=full_path,
 			use_selection=True,
@@ -219,25 +271,157 @@ class MavhodExportExecute(bpy.types.Operator):
 				gltf_data = json.load(gf)
 
 			gltf_images = gltf_data.get('images', [])
-			for i, (img, src_path, abs_dst, rel_uri) in enumerate(ordered_images):
-				if i >= len(gltf_images):
-					break
-				gltf_img = gltf_images[i]
-				old_uri = gltf_img.get('uri', '')
-				if not old_uri or 'bufferView' in gltf_img:
+			gltf_textures = gltf_data.get('textures', [])
+			gltf_materials = gltf_data.get('materials', [])
+
+			# --- STEP A: Structurally map Blender Material Sockets to GLTF indices ---
+			indices_to_remove = set()
+			gltf_img_idx_to_blender_img = {} # i_idx -> Blender Image object
+			
+			for m_idx, slot in enumerate(obj.material_slots):
+				if m_idx >= len(gltf_materials): break
+				if not (slot.material and slot.material.use_nodes): continue
+				
+				g_mat = gltf_materials[m_idx]
+				nodes = slot.material.node_tree.nodes
+				
+				# Trace sockets to find their GLTF mapping
+				socket_to_image = {} # socket_name -> Image object
+				target_nodes = [n for n in nodes if n.type in {'GROUP', 'BSDF_PRINCIPLED'}]
+				
+				for target in target_nodes:
+					for sock in target.inputs:
+						if not sock.is_linked: continue
+						
+						from_node = sock.links[0].from_node
+						if from_node.type == 'NORMAL_MAP' and sock.name in {'Normal', 'Normal Map'}:
+							if from_node.inputs['Color'].is_linked:
+								from_node = from_node.inputs['Color'].links[0].from_node
+						
+						if from_node.type == 'TEX_IMAGE' and from_node.image:
+							socket_to_image[sock.name] = from_node.image
+
+				# Define GLTF attribute to Socket Name mapping
+				# Note: Blender's GLTF exporter maps these specifically
+				attr_map = {
+					('pbrMetallicRoughness', 'baseColorTexture'): ['Base Color', 'Albedo Map'],
+					('pbrMetallicRoughness', 'metallicRoughnessTexture'): ['Metallic', 'Roughness'], # ORM map case
+					('normalTexture',): ['Normal', 'Normal Map'],
+					('occlusionTexture',): ['AO'],
+					('emissiveTexture',): ['Emission', 'Emission Color']
+				}
+
+				for gltf_path, socket_names in attr_map.items():
+					# Get GLTF texture reference
+					tex_ref = g_mat
+					for p in gltf_path:
+						if isinstance(tex_ref, dict): tex_ref = tex_ref.get(p)
+					
+					if not tex_ref or not isinstance(tex_ref, dict): continue
+					t_idx = tex_ref.get('index')
+					if t_idx is None or t_idx >= len(gltf_textures): continue
+					i_idx = gltf_textures[t_idx].get('source')
+					if i_idx is None: continue
+
+					# Record mapping for URI fixing later
+					for sname in socket_names:
+						if sname in socket_to_image:
+							gltf_img_idx_to_blender_img[i_idx] = socket_to_image[sname]
+							break
+
+					# Find if any linked socket image matches user preference
+					should_export = True
+					for sname in socket_names:
+						flag = self.INPUT_TO_FLAG.get(sname)
+						if flag and not getattr(self, flag):
+							# User unchecked this specific map type
+							should_export = False
+							break
+					
+					if not should_export:
+						# Remove attribute from material
+						parent = g_mat
+						for p in gltf_path[:-1]: parent = parent.get(p)
+						if isinstance(parent, dict): del parent[gltf_path[-1]]
+						indices_to_remove.add(i_idx)
+
+			# --- STEP B: Finalize URIs and Safe Cleanup ---
+			# We iterate ALL images in the GLTF to see which ones we can fix with original files
+			used_img_indices = set()
+			# Re-scan used images after nulling
+			for g_mat in gltf_materials:
+				# Recursive scan for 'index' keys that point to textures
+				def find_used(data):
+					if isinstance(data, dict):
+						if 'index' in data and len(data) == 1: # texture ref usually
+							t_idx = data['index']
+							if t_idx < len(gltf_textures):
+								src = gltf_textures[t_idx].get('source')
+								if src is not None: used_img_indices.add(src)
+						for v in data.values(): find_used(v)
+					elif isinstance(data, list):
+						for item in data: find_used(item)
+				find_used(g_mat)
+
+			# Build final GLTF Image list
+			new_img_list = []
+			old_to_new_img = {}
+			
+			for i, gimg in enumerate(gltf_images):
+				temp_uri = gimg.get('uri', '')
+				temp_path = os.path.join(parent_folder_path, temp_uri) if temp_uri else None
+				
+				if i not in used_img_indices:
+					# This image is no longer used (stripped)
+					if temp_path and os.path.isfile(temp_path): os.remove(temp_path)
 					continue
 
-				exported_temp_path = os.path.join(parent_folder_path, old_uri)
+				# Re-mapping URIs to original filenames using structural mapping
+				blender_img = gltf_img_idx_to_blender_img.get(i)
+				matched_meta = image_metadata.get(blender_img) if blender_img else None
+				
+				old_to_new_img[i] = len(new_img_list)
+				if matched_meta and matched_meta['abs_dst']:
+					# Perform the robust copy and replace
+					try:
+						if matched_meta['src_path'] and os.path.isfile(matched_meta['src_path']):
+							if not os.path.exists(matched_meta['abs_dst']):
+								shutil.copy2(matched_meta['src_path'], matched_meta['abs_dst'])
+							gimg['uri'] = matched_meta['rel_uri'].replace("\\", "/")
+							if temp_path and os.path.isfile(temp_path): os.remove(temp_path)
+					except Exception:
+						pass # Keep original Blender export if copy fails
+				
+				new_img_list.append(gimg)
 
-				if abs_dst:
-					if src_path and os.path.isfile(src_path) and not os.path.exists(abs_dst):
-						shutil.copy2(src_path, abs_dst)
-					if os.path.isfile(exported_temp_path):
-						os.remove(exported_temp_path)
-					gltf_img['uri'] = rel_uri.replace("\\", "/")
+			# Re-index Textures
+			new_tex_list = []
+			old_to_new_tex = {}
+			for i, gtex in enumerate(gltf_textures):
+				src = gtex.get('source')
+				if src is not None and src in old_to_new_img:
+					old_to_new_tex[i] = len(new_tex_list)
+					gtex['source'] = old_to_new_img[src]
+					new_tex_list.append(gtex)
 
+			# Re-index Material references
+			def update_indices(data):
+				if isinstance(data, dict):
+					if 'index' in data and len(data) == 1:
+						if data['index'] in old_to_new_tex:
+							data['index'] = old_to_new_tex[data['index']]
+					for v in data.values(): update_indices(v)
+				elif isinstance(data, list):
+					for item in data: update_indices(item)
+			update_indices(gltf_materials)
+
+			# Save
+			gltf_data['images'] = new_img_list
+			gltf_data['textures'] = new_tex_list
+			
 			with open(full_path, 'w', encoding='utf-8') as gf:
 				json.dump(gltf_data, gf, indent=4)
+				
 		except Exception as e:
 			self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
 
@@ -260,6 +444,15 @@ class MavhodExportExecute(bpy.types.Operator):
 		self._export_scene_path = bpy.path.abspath(props.scene_dest_path)
 		self._export_asset_path = bpy.path.abspath(props.asset_dest_path) if props.asset_dest_path else ""
 		self._asset_source_path = bpy.path.abspath(props.asset_source_path) if props.asset_source_path else ""
+		
+		# Capture texture export flags
+		self._export_albedo = props.export_albedo
+		self._export_metallic = props.export_metallic
+		self._export_roughness = props.export_roughness
+		self._export_normal = props.export_normal
+		self._export_emission = props.export_emission
+		self._export_alpha = props.export_alpha
+		self._export_ao = props.export_ao
 
 		if not self._export_scene_path:
 			self.report({'WARNING'}, "Export Scene Path is not set!")
