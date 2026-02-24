@@ -4,6 +4,24 @@ import os
 import shutil
 
 
+def get_robust_relpath(target_path, base_path):
+	"""
+	Calculates the relative path from base_path to target_path.
+	Ensures both paths are absolute and symlinks are resolved before calculation.
+	"""
+	if not target_path or not base_path:
+		return target_path
+	
+	abs_target = os.path.realpath(bpy.path.abspath(target_path))
+	abs_base = os.path.realpath(bpy.path.abspath(base_path))
+	
+	try:
+		return os.path.relpath(abs_target, abs_base)
+	except (ValueError, Exception):
+		# Fallback if paths are on different drives (Windows) or other errors
+		return abs_target
+
+
 class MavhodExportSettings(bpy.types.Operator):
 	"""Open dialog to export the current scene"""
 	bl_idname = "mavhod_tool.export_settings"
@@ -21,8 +39,9 @@ class MavhodExportSettings(bpy.types.Operator):
 	def draw(self, context):
 		layout = self.layout
 		props = context.scene.MavhodToolProps
-		layout.prop(props, "exportAssetPath")
-		layout.prop(props, "exportScenePath")
+		layout.prop(props, "asset_source_path")
+		layout.prop(props, "asset_dest_path")
+		layout.prop(props, "scene_dest_path")
 
 
 class MavhodExportExecute(bpy.types.Operator):
@@ -40,6 +59,7 @@ class MavhodExportExecute(bpy.types.Operator):
 	_total = 0
 	_export_asset_path = ""
 	_export_scene_path = ""
+	_asset_source_path = ""
 	_mesh_data_for_json = []
 
 	def modal(self, context, event):
@@ -56,12 +76,27 @@ class MavhodExportExecute(bpy.types.Operator):
 			is_linked = False
 			lib = obj.library or (obj.data.library if obj.data else None)
 			if lib and lib.filepath:
-				abs_lib_path = bpy.path.abspath(lib.filepath)
-				source_folder = os.path.basename(os.path.dirname(abs_lib_path))
+				abs_lib_path = os.path.realpath(bpy.path.abspath(lib.filepath))
+				
+				# If asset source path is set, use it to determine the relative source folder
+				if self._asset_source_path:
+					rel_source = get_robust_relpath(os.path.dirname(abs_lib_path), self._asset_source_path)
+					if rel_source == ".":
+						source_folder = ""
+					else:
+						source_folder = rel_source
+				else:
+					source_folder = os.path.basename(os.path.dirname(abs_lib_path))
 				is_linked = True
 			elif bpy.data.filepath:
-				abs_blend_path = bpy.path.abspath(bpy.data.filepath)
-				source_folder = os.path.basename(os.path.dirname(abs_blend_path))
+				abs_blend_path = os.path.realpath(bpy.path.abspath(bpy.data.filepath))
+				
+				# If asset source path is set, use it to determine the relative source folder
+				if self._asset_source_path:
+					rel_source = get_robust_relpath(os.path.dirname(abs_blend_path), self._asset_source_path)
+					source_folder = "" if rel_source == "." else rel_source
+				else:
+					source_folder = os.path.basename(os.path.dirname(abs_blend_path))
 
 			# Set root directory for export
 			# Linked objects -> Asset Path, Local objects -> Scene Path
@@ -72,12 +107,13 @@ class MavhodExportExecute(bpy.types.Operator):
 				root_dir = self._export_scene_path if self._export_scene_path else self._export_asset_path
 
 			# Construct paths
-			# Local objects exported directly to root_dir, Linked objects to source_folder
 			if is_linked:
+				# Linked objects: both GLTF and textures follow the source folder structure
 				parent_folder_path = os.path.join(root_dir, source_folder)
 				relative_asset_path = os.path.join(source_folder, f"{mesh_data_name}.gltf")
 				dest_display = f"{source_folder}/"
 			else:
+				# Local objects: GLTF stays in the root, but textures will still follow source_folder (handled below)
 				parent_folder_path = root_dir
 				relative_asset_path = f"{mesh_data_name}.gltf"
 				dest_display = "scene (root)/"
@@ -96,36 +132,43 @@ class MavhodExportExecute(bpy.types.Operator):
 				# Asset root for textures (always uses Asset Path if available)
 				tex_root = self._export_asset_path if self._export_asset_path else self._export_scene_path
 
-				# Collect images and determine their new paths
-				seen_ids = set()
-				ordered_images = []  # list of (img_data_block, abs_src_path, final_abs_dst, relative_uri_for_gltf)
+				# Collect images in iteration order (to match GLTF images array order by index)
+				ordered_images = []  # list of (img, src_path, abs_dst, rel_uri)
+				seen_names = set()
 				for slot in obj.material_slots:
 					if slot.material and slot.material.use_nodes:
 						for node in slot.material.node_tree.nodes:
 							if node.type == 'TEX_IMAGE' and node.image:
 								img = node.image
-								if id(img) not in seen_ids:
-									seen_ids.add(id(img))
-									
-									src_path = bpy.path.abspath(img.filepath) if img.filepath else None
-									if src_path and os.path.isfile(src_path):
-										# Determine image source folder
-										img_source_folder = os.path.basename(os.path.dirname(src_path))
-										img_filename = os.path.basename(src_path)
-										
-										# Target texture folder: tex_root / source_folder / texture /
-										target_tex_dir = os.path.join(tex_root, img_source_folder, "texture")
-										os.makedirs(target_tex_dir, exist_ok=True)
-										
-										abs_dst = os.path.join(target_tex_dir, img_filename)
-										
-										# Calculate relative path from GLTF dir to texture file
-										# parent_folder_path is the GLTF dir
-										rel_uri = os.path.relpath(abs_dst, parent_folder_path)
-										
-										ordered_images.append((img, src_path, abs_dst, rel_uri))
+								if img.name in seen_names:
+									continue
+								seen_names.add(img.name)
+
+								# Resolve source path
+								# For linked images: resolve relative to their library file
+								# For local images: resolve relative to the current blend file
+								if img.library and img.library.filepath:
+									lib_dir = os.path.dirname(os.path.realpath(bpy.path.abspath(img.library.filepath)))
+									src_path = os.path.realpath(bpy.path.abspath(img.filepath, start=lib_dir)) if img.filepath else None
+								else:
+									src_path = os.path.realpath(bpy.path.abspath(img.filepath)) if img.filepath else None
+
+								if src_path and os.path.isfile(src_path):
+									# Determine destination subfolder using get_robust_relpath
+									if self._asset_source_path:
+										rel_source = get_robust_relpath(os.path.dirname(src_path), self._asset_source_path)
+										img_source_folder = "" if rel_source == "." else rel_source
 									else:
-										ordered_images.append((img, None, None, None))
+										img_source_folder = os.path.basename(os.path.dirname(src_path))
+
+									img_filename = os.path.basename(src_path)
+									target_tex_dir = os.path.join(tex_root, img_source_folder)
+									os.makedirs(target_tex_dir, exist_ok=True)
+									abs_dst = os.path.join(target_tex_dir, img_filename)
+									rel_uri = get_robust_relpath(abs_dst, parent_folder_path)
+									ordered_images.append((img, src_path, abs_dst, rel_uri))
+								else:
+									ordered_images.append((img, None, None, None))
 
 				# Isolate object for export
 				bpy.ops.object.select_all(action='DESELECT')
@@ -134,7 +177,7 @@ class MavhodExportExecute(bpy.types.Operator):
 
 				full_path = os.path.join(parent_folder_path, f"{mesh_data_name}.gltf")
 
-				# Export with AUTO image format (creates temporary files we'll replace/ignore)
+				# Export – Blender writes temp image files next to the GLTF
 				bpy.ops.export_scene.gltf(
 					filepath=full_path,
 					use_selection=True,
@@ -144,7 +187,7 @@ class MavhodExportExecute(bpy.types.Operator):
 				)
 				self._exported_meshes.add(mesh_data_name)
 
-				# Patch GLTF and handle textures
+				# Patch GLTF: for each image entry match by index, copy original, fix URI
 				if os.path.isfile(full_path):
 					try:
 						with open(full_path, 'r', encoding='utf-8') as gf:
@@ -152,28 +195,30 @@ class MavhodExportExecute(bpy.types.Operator):
 
 						gltf_images = gltf_data.get('images', [])
 						for i, (img, src_path, abs_dst, rel_uri) in enumerate(ordered_images):
-							if i >= len(gltf_images): break
+							if i >= len(gltf_images):
+								break
 							gltf_img = gltf_images[i]
 							old_uri = gltf_img.get('uri', '')
-							if not old_uri or 'bufferView' in gltf_img: continue
+							if not old_uri or 'bufferView' in gltf_img:
+								continue
 
-							# Remove the default exported images adjacent to GLTF
 							exported_temp_path = os.path.join(parent_folder_path, old_uri)
-							if os.path.isfile(exported_temp_path):
-								os.remove(exported_temp_path)
 
 							if abs_dst:
-								# Copy original texture to its shared home in Asset Path
+								# Copy original texture to the correct destination
 								if src_path and os.path.isfile(src_path) and not os.path.exists(abs_dst):
 									shutil.copy2(src_path, abs_dst)
-								
-								# Update GLTF to point to the shared Asset Path location
-								gltf_img['uri'] = rel_uri.replace("\\", "/") # Ensure web-style paths
+								# Remove Blender's temp exported image
+								if os.path.isfile(exported_temp_path):
+									os.remove(exported_temp_path)
+								# Update GLTF URI to point to real texture location
+								gltf_img['uri'] = rel_uri.replace("\\", "/")
+							# else: no original on disk → leave Blender's exported image and URI as-is
 
 						with open(full_path, 'w', encoding='utf-8') as gf:
 							json.dump(gltf_data, gf, indent=4)
 					except Exception as e:
-						self.report({'WARNING'}, f"Could not reorganize textures/patch GLTF: {str(e)}")
+						self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
 
 			# Collect JSON data
 			local_matrix = obj.matrix_local
@@ -193,8 +238,9 @@ class MavhodExportExecute(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		props = context.scene.MavhodToolProps
-		self._export_scene_path = bpy.path.abspath(props.exportScenePath)
-		self._export_asset_path = bpy.path.abspath(props.exportAssetPath) if props.exportAssetPath else ""
+		self._export_scene_path = bpy.path.abspath(props.scene_dest_path)
+		self._export_asset_path = bpy.path.abspath(props.asset_dest_path) if props.asset_dest_path else ""
+		self._asset_source_path = bpy.path.abspath(props.asset_source_path) if props.asset_source_path else ""
 
 		if not self._export_scene_path:
 			self.report({'WARNING'}, "Export Scene Path is not set!")

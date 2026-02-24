@@ -48,15 +48,21 @@ class FBXFileItem(bpy.types.PropertyGroup):
 class MavhodToolSceneProps(bpy.types.PropertyGroup):
 	entryPath: bpy.props.StringProperty(default="..")
 	savePoint: bpy.props.StringProperty(default=".")
-	exportAssetPath: bpy.props.StringProperty(
-		name="Export Asset Path",
-		description="Path for exporting assets",
+	asset_source_path: bpy.props.StringProperty(
+		name="Asset Source Path",
+		description="Source path for assets (e.g. where original FBX/GLTF files are located)",
 		default="",
 		subtype='DIR_PATH'
 	)
-	exportScenePath: bpy.props.StringProperty(
-		name="Export Scene Path",
-		description="Path for exporting scenes",
+	asset_dest_path: bpy.props.StringProperty(
+		name="Asset Destination Path",
+		description="Path for exporting processed assets (.gltf)",
+		default="",
+		subtype='DIR_PATH'
+	)
+	scene_dest_path: bpy.props.StringProperty(
+		name="Scene Destination Path",
+		description="Path for exporting scene data (.json)",
 		default="",
 		subtype='DIR_PATH'
 	)
