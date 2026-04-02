@@ -13,14 +13,6 @@ bl_info = {
 import sys
 import os
 
-path = sys.path
-flag = False
-for item in path:
-	if "test_view_3d" in item:
-		flag = True
-if flag is False:
-	sys.path.append(os.path.join(os.path.dirname(__file__), "..", "test_view_3d"))
-
 if "bpy" in locals():
 	import importlib as imp
 	from . import import_fbx
