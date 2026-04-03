@@ -12,9 +12,6 @@ func _enter_tree() -> void:
 	# Connect the asset manager button directly to the asset manager script
 	var asset_button = dock.get_node("VBoxContainer/AssetManagerButton")
 	asset_button.pressed.connect(AssetManagerScript.show_dialog)
-	
-	add_import_plugin(preload("json/json_import.gd").new())
-
 
 func _exit_tree() -> void:
 	if dock:
