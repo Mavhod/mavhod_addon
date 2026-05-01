@@ -7,6 +7,13 @@ class_name DbinResource
 ## Save any data to a .dbin file on disk
 static func save_to_file(path: String, p_data: Variant) -> Error:
 	var buffer = var_to_bytes(p_data)
+	var dir_path = path.get_base_dir()
+	if not DirAccess.dir_exists_absolute(dir_path):
+		var make_dir_err = DirAccess.make_dir_recursive_absolute(dir_path)
+		if make_dir_err != OK:
+			push_error("Failed to create directory: %s (Error: %d)" % [dir_path, make_dir_err])
+			return make_dir_err
+
 	var file = FileAccess.open(path, FileAccess.WRITE)
 	if not file:
 		var err = FileAccess.get_open_error()
