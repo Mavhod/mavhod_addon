@@ -1,3 +1,9 @@
+
+# example
+#await DbinResource.save_to_file_async("user://save/aaa.dbin", {"aaa": 555, "bbb": "eiei"})
+#var data = await DbinResource.load_from_file_async("user://save/aaa.dbin")
+#print(data)
+
 @tool extends Resource
 class_name DbinResource
 
@@ -41,7 +47,7 @@ static func save_to_file_async(path: String, p_data: Variant) -> Error:
 ## Load data directly from a .dbin file on disk (works for res:// and user://)
 static func load_from_file(path: String) -> Variant:
 	if not FileAccess.file_exists(path):
-		push_error("File not found: %s" % path)
+		#push_error("File not found: %s" % path)
 		return null
 		
 	var buffer = FileAccess.get_file_as_bytes(path)
