@@ -21,7 +21,7 @@ func _internal_loads(_filepaths: Array):
 
 func _internal_work(index: int):
 	var filepath = filepaths[index]
-	if not FileAccess.file_exists(filepath): buffers[index] = null; return ;
+	if not FileAccess.file_exists(filepath): buffers[index] = PackedByteArray(); return ;
 	buffers[index] = FileAccess.get_file_as_bytes(filepath)
 
 func _wait_logic():
