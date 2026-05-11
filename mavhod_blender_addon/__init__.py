@@ -19,23 +19,40 @@ if "bpy" in locals():
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
+	from . import create_setting
 	from . import export_scene
 	imp.reload(import_fbx)
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
 	imp.reload(create_convex)
+	imp.reload(create_setting)
 	imp.reload(export_scene)
 else:
 	from . import import_fbx
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
+	from . import create_setting
 	from . import export_scene
 
 import bpy
 
 class FBXFileItem(bpy.types.PropertyGroup):
 	filepath: bpy.props.StringProperty(name="File Path")
+
+class MavhodPathPair(bpy.types.PropertyGroup):
+	source_path: bpy.props.StringProperty(
+		name="Source Path",
+		description="Source directory for assets",
+		default="",
+		subtype='DIR_PATH'
+	)
+	dest_path: bpy.props.StringProperty(
+		name="Destination Path",
+		description="Destination directory for exported assets",
+		default="",
+		subtype='DIR_PATH'
+	)
 
 class MavhodToolSceneProps(bpy.types.PropertyGroup):
 	entryPath: bpy.props.StringProperty(default="..")
@@ -66,6 +83,7 @@ class MavhodToolSceneProps(bpy.types.PropertyGroup):
 	export_alpha: bpy.props.BoolProperty(name="Alpha", default=True)
 	export_ao: bpy.props.BoolProperty(name="AO", default=True)
 	fbx_files: bpy.props.CollectionProperty(type=FBXFileItem)
+	path_pairs: bpy.props.CollectionProperty(type=MavhodPathPair)
 
 class MavhodToolPanel(bpy.types.Panel):
 	bl_label = "Mavhod Tool"
@@ -89,7 +107,9 @@ class MavhodToolPanel(bpy.types.Panel):
 		# ========== EXPORT SECTION ==========
 		box = layout.box()
 		box.label(text="Export", icon="EXPORT")
-		box.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
+		col = box.column(align=True)
+		col.operator("mavhod_tool.create_setting", text="Create Setting", icon="PRESET")
+		col.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
 
 		# ========== MESH TOOLS SECTION ==========
 		box = layout.box()
@@ -101,11 +121,17 @@ class MavhodToolPanel(bpy.types.Panel):
 
 classes = (
 	FBXFileItem,
+	MavhodPathPair,
 	MavhodToolSceneProps,
 	import_fbx.ImportFBXFiles,
 	import_gltf.ImportGLTFFiles,
 	arrange_meshes.ArrangeSelectedMeshes,
 	create_convex.CreateConvexHull,
+	create_setting.MavhodAddPathPair,
+	create_setting.MavhodRemovePathPair,
+	create_setting.MavhodCreateSetting,
+	create_setting.MavhodLoadSettingsJSON,
+	create_setting.MavhodSaveSettingsJSON,
 	export_scene.MavhodExportSettings,
 	export_scene.MavhodExportExecute,
 	MavhodToolPanel,
