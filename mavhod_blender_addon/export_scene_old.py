@@ -39,15 +39,8 @@ class MavhodExportExecute(bpy.types.Operator):
 		# ตรวจสอบว่าโมเดลนี้ยังไม่ได้ถูกส่งออก (เพื่อเลี่ยงการส่งออกซ้ำถ้า Mesh ถูกใช้ในหลายจุด)
 		if root_dir and obj.data.name not in self._exported_meshes:
 
-			# 3. ส่งออกโมเดลเป็น GLTF และทำการปรับแก้ไฟล์ (Patching) เพื่อแก้ไขพาธของภาพและ Filter
-			full_path = os.path.join(parent_folder_path, f"{obj.data.name}.gltf")
-			self._export_and_patch_gltf(context, obj, parent_folder_path, full_path, ordered_images)
-			self._exported_meshes.add(obj.data.name)
 
-		# 4. บันทึกข้อมูล Instance ลงในรายการเพื่อเตรียมเขียนไฟล์ JSON ของ Scene รวม
-		self._mesh_data_for_json.append(
-			self._get_mesh_instance_data(obj, is_linked, relative_asset_path)
-		)
+
 
 
 
@@ -235,20 +228,6 @@ class MavhodExportExecute(bpy.types.Operator):
 		except Exception as e:
 			self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
 
-	def _get_mesh_instance_data(self, obj, is_linked, relative_asset_path):
-		"""เตรียมข้อมูลของ Instance สำหรับการเขียนลงในไฟล์ JSON ผลลัพธ์สุดท้าย"""
-		local_matrix = obj.matrix_local
-		loc, rot_quat, scale = local_matrix.decompose()
-		return {
-			"name": obj.name,
-			"mesh_data": obj.data.name,
-			"is_linked": is_linked,
-			"asset_path": relative_asset_path,
-			"location": {"x": loc.x, "y": loc.y, "z": loc.z},
-			"rotation": {"x": rot_quat.x, "y": rot_quat.y, "z": rot_quat.z, "w": rot_quat.w},
-			"scale": {"x": scale.x, "y": scale.y, "z": scale.z}
-		}
-
 	def invoke(self, context, event):
 					
 		self._export_asset_path = bpy.path.abspath(props.asset_dest_path) if props.asset_dest_path else ""
@@ -262,17 +241,7 @@ class MavhodExportExecute(bpy.types.Operator):
 			print(pair.dest_path)
 		return {'CANCELLED'}
 
-		# เตรียมโฟลเดอร์สำหรับส่งออกไฟล์ JSON และไฟล์โมเดล GLTF
-		os.makedirs(self._export_scene_path, exist_ok=True)
-		if self._export_asset_path:
-			os.makedirs(self._export_asset_path, exist_ok=True)
-
-
-
-
 	def _finish(self, context):
-
-
 
 		# บันทึกข้อมูล Scene รวมทั้งหมดลงไฟล์ JSON
 		if self.filepath:
