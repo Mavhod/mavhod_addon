@@ -46,32 +46,14 @@ class MavhodExportExecute(bpy.types.Operator):
 
 
 	def _export_and_patch_gltf(self, context, obj, parent_folder_path, full_path, image_metadata):
-		"""
-		ส่งออก GLTF และทำการปรับแก้ไฟล์ (Patching) โดยการแกะรอยตามโครงสร้างโหนด (Socket -> GLTF)
-		เพื่อให้แน่ใจว่าการอ้างอิงชื่อและ Filter ถูกต้อง 100%
-		"""
-		# แยกออบเจกต์ออกมา (Isolate Object)
-		bpy.ops.object.select_all(action='DESELECT')
-		obj.select_set(True)
-		context.view_layer.objects.active = obj
 
-		# 1. ขั้นตอนการส่งออกตามปกติของ Blender
-		bpy.ops.export_scene.gltf(
-			filepath=full_path,
-			use_selection=True,
-			export_format='GLTF_SEPARATE',
-			export_image_format='AUTO',
-			export_apply=True
-		)
 
-		if not os.path.isfile(full_path):
-			return
+
+
 
 		try:
-			with open(full_path, 'r', encoding='utf-8') as gf:
-				gltf_data = json.load(gf)
 
-			gltf_images = gltf_data.get('images', [])
+			
 			gltf_textures = gltf_data.get('textures', [])
 			gltf_materials = gltf_data.get('materials', [])
 
@@ -170,8 +152,7 @@ class MavhodExportExecute(bpy.types.Operator):
 			old_to_new_img = {}
 			
 			for i, gimg in enumerate(gltf_images):
-				temp_uri = gimg.get('uri', '')
-				temp_path = os.path.join(parent_folder_path, temp_uri) if temp_uri else None
+
 				
 				if i not in used_img_indices:
 					# หากภาพนี้ไม่ได้ใช้งานแล้ว (ถูกลบออกจากการ Patch ก่อนหน้า) ให้ลบไฟล์ที่ส่งออกมาโดย Blender ทิ้ง
@@ -222,11 +203,7 @@ class MavhodExportExecute(bpy.types.Operator):
 			gltf_data['images'] = new_img_list
 			gltf_data['textures'] = new_tex_list
 			
-			with open(full_path, 'w', encoding='utf-8') as gf:
-				json.dump(gltf_data, gf, indent=4)
-				
-		except Exception as e:
-			self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
+
 
 	def invoke(self, context, event):
 					
