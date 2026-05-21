@@ -86,34 +86,8 @@ class MavhodExportExecute(bpy.types.Operator):
 			'blend_filepath': blend_filepath, # e.g. "/d/wander/leftway2/model/buildingNurseOffice/buildingNurseOffice.blend"
 			'dst_path': dst_path
 		}
-	
-	def _collect_images(self, obj):
-		"""
-		รวบรวมข้อมูล Metadata ของ Texture จาก Material ของออบเจกต์
-		คืนค่าเป็น image_metadata: dict ที่จับคู่ Blender Image กับ Metadata
-		"""
-		image_metadata = {}
-		#
-		for slot in obj.material_slots:
-			if not (slot.material and slot.material.use_nodes): continue
-			nodes = slot.material.node_tree.nodes
-			for node in nodes:
-				if not (node.type == 'TEX_IMAGE' and node.image): continue
-				img = node.image
-				if img in image_metadata: continue
-				# ค้นหาพาธไฟล์ต้นฉบับดั้งเดิม (Resolve original source path)
-				if img.library and img.library.filepath:
-					lib_dir = os.path.dirname(os.path.realpath(bpy.path.abspath(img.library.filepath)))
-					src_path = os.path.realpath(bpy.path.abspath(img.filepath, start=lib_dir)) if img.filepath else None
-				else:
-					src_path = os.path.realpath(bpy.path.abspath(img.filepath)) if img.filepath else None
-				image_metadata[img] = {
-					'src_path': src_path,
-					'dst_path': self._get_dst_path(src_path),
-				}
-		return image_metadata
 
-	def _export_and_patch_gltf(self, context, obj, path_info, image_metadata):
+	def _export_and_patch_gltf(self, context, obj, path_info):
 		"""
 		ส่งออก GLTF และทำการปรับแก้ไฟล์ (Patching) โดยการแกะรอยตามโครงสร้างโหนด (Socket -> GLTF)
 		เพื่อให้แน่ใจว่าการอ้างอิงชื่อและ Filter ถูกต้อง 100%
@@ -131,25 +105,17 @@ class MavhodExportExecute(bpy.types.Operator):
 			export_image_format='AUTO',
 			export_apply=True
 		)
-		'''
+		#
 		if not os.path.isfile(dst_path): return
 		# 2. อ่านไฟล์ GLTF และทำการแก้ไข (Patching)
 		try:
 			with open(dst_path, 'r', encoding='utf-8') as gf:
 				gltf_data = json.load(gf)
 			#
-			gltf_images = gltf_data.get('images', [])
-			for i, gimg in enumerate(gltf_images):
-				temp_uri = gimg.get('uri', '')
-				#temp_path = os.path.join(parent_folder_path, temp_uri) if temp_uri else None
-
-
-
 			with open(dst_path, 'w', encoding='utf-8') as gf:
 				json.dump(gltf_data, gf, indent=4)
 		except Exception as e:
 			self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
-		'''
 
 
 
@@ -187,17 +153,14 @@ class MavhodExportExecute(bpy.types.Operator):
 		if export_key not in self._exported_meshes:
 			# กำหนด Root สำหรับเก็บ Texture (จะใช้ Asset Path ถ้ามี มิฉะนั้นจะใช้ Scene Path)
 			#tex_root = self._export_asset_path if self._export_asset_path else self._export_scene_path
-			# 2. รวบรวมข้อมูลรูปภาพ (Textures) ที่ใช้งานใน Material
-			ordered_images = self._collect_images(obj)
 			# 3. ส่งออกโมเดลเป็น GLTF และทำการปรับแก้ไฟล์ (Patching) เพื่อแก้ไขพาธของภาพและ Filter
 			#full_path = os.path.join(parent_folder_path, f"{obj.data.name}.gltf")
-			self._export_and_patch_gltf(context, obj, path_info, ordered_images)
+			self._export_and_patch_gltf(context, obj, path_info)
 			self._exported_meshes.add(export_key)
 			# 4. บันทึกข้อมูล Instance ลงในรายการเพื่อเตรียมเขียนไฟล์ JSON ของ Scene รวม
 			self._mesh_data_for_json.append(self._get_mesh_instance_data(obj, path_info))
 
 		#print(path_info)
-		print(ordered_images)
 		#print(obj.data.name)
 		#print(export_key)
 		return {'PASS_THROUGH'}
