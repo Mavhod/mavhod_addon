@@ -108,7 +108,7 @@ class MavhodToolPanel(bpy.types.Panel):
 		box = layout.box()
 		box.label(text="Export", icon="EXPORT")
 		col = box.column(align=True)
-		col.operator("mavhod_tool.export_setting", text="Export Setting", icon="PRESET")
+		col.operator("mavhod_tool.export_setting", text="Setting", icon="PRESET")
 		col.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
 
 		# ========== MESH TOOLS SECTION ==========
@@ -146,4 +146,3 @@ def unregister():
 
 if __name__ == "__main__":
 	register()
-

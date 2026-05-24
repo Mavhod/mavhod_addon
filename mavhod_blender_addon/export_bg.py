@@ -3,13 +3,13 @@ import sys
 import argparse
 import os
 
-# เพิ่มไดเรกทอรีปัจจุบันเข้า sys.path เพื่อให้ import export_utils ได้
+# Add current directory to sys.path to allow importing export_utils
 sys.path.append(os.path.dirname(__file__))
 import export_utils
 from export_utils import copy_and_hash_images, rebind_materials_to_hashed_images
 
 def main():
-    # รับอาร์กิวเมนต์ที่ส่งมาหลัง "--"
+    # Get arguments passed after "--"
     argv = sys.argv
     if "--" in argv:
         argv = argv[argv.index("--") + 1:]
@@ -38,24 +38,24 @@ def main():
             print(f"Warning: Mesh data '{args.mesh}' not found in the scene.")
             return
     else:
-        # หากไม่ระบุ mesh ให้เลือก Mesh ทั้งหมดใน Scene
+        # If no mesh is specified, select all Mesh objects in the Scene
         bpy.ops.object.select_all(action='DESELECT')
         for obj in bpy.data.objects:
             if obj.type == 'MESH':
                 obj.select_set(True)
 
-    # 1. ทำการ Copy และ Rename Image
+    # 1. Copy and Rename Images
     output_dir = os.path.dirname(args.output)
     print(f"Processing images to: {output_dir}")
     image_mapping = copy_and_hash_images(output_dir)
 
-    # 2. Duplicate Material และ Re-bind Image
+    # 2. Duplicate Materials and Re-bind Images
     print("Re-binding materials to hashed images...")
     rebind_materials_to_hashed_images(image_mapping)
 
     print(f"Exporting to: {args.output}")
 
-    # 3. สั่ง Export เป็น GLTF
+    # 3. Export as GLTF
     bpy.ops.export_scene.gltf(
         filepath=args.output,
         export_format='GLTF_SEPARATE',

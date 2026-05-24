@@ -4,7 +4,7 @@ import shutil
 import hashlib
 
 def get_images_from_materials():
-    """ค้นหา Image ทั้งหมดที่ถูกใช้ใน Material ของ Object ที่กำลังถูกเลือก"""
+    """Find all images used in materials of currently selected objects."""
     images = set()
     for obj in bpy.context.selected_objects:
         if obj.type == 'MESH':
@@ -18,8 +18,8 @@ def get_images_from_materials():
 
 def copy_and_hash_images(output_dir):
     """
-    Copy image ไปที่ output_dir และเปลี่ยนชื่อเป็น hash ของ real path
-    คืนค่าเป็น Mapping { image_name: hashed_full_path }
+    Copy images to output_dir and rename them to the hash of their real path.
+    Returns Mapping: { image_name: hashed_full_path }.
     """
     os.makedirs(output_dir, exist_ok=True)
     images = get_images_from_materials()
@@ -29,7 +29,7 @@ def copy_and_hash_images(output_dir):
         if img.source != 'FILE':
             continue
             
-        # หา Path จริงของไฟล์
+        # Get real file path
         abs_path = bpy.path.abspath(img.filepath)
         real_path = os.path.realpath(abs_path)
         
@@ -37,16 +37,16 @@ def copy_and_hash_images(output_dir):
             print(f"Warning: Image file not found: {real_path}")
             continue
             
-        # สร้าง SHA256 Hash จากค่า real path
+        # Create SHA256 Hash from real path
         hash_obj = hashlib.sha256(real_path.encode('utf-8'))
         hash_name = hash_obj.hexdigest()
         
-        # แยกนามสกุลไฟล์
+        # Get file extension
         ext = os.path.splitext(real_path)[1]
         new_filename = hash_name + ext
         dst_path = os.path.join(output_dir, new_filename)
         
-        # ทำการ Copy ไฟล์
+        # Copy file
         try:
             shutil.copy2(real_path, dst_path)
             print(f"Copied image: {real_path} -> {dst_path}")
@@ -58,11 +58,11 @@ def copy_and_hash_images(output_dir):
 
 def rebind_materials_to_hashed_images(image_mapping):
     """
-    Duplicate material และแก้ให้ใช้ Image ใหม่ตาม image_mapping
+    Duplicate materials and update them to use new images according to image_mapping.
     """
-    material_cache = {} # Mapping { original_material_name: new_material }
+    material_cache = {} # Mapping: { original_material_name: new_material }
     
-    # รวบรวมออบเจกต์ที่ถูกเลือก
+    # Process selected objects
     for obj in bpy.context.selected_objects:
         if obj.type != 'MESH' or not obj.data:
             continue
@@ -79,17 +79,17 @@ def rebind_materials_to_hashed_images(image_mapping):
                 new_mat.name = f"{mat.name}_hashed"
                 material_cache[mat.name] = new_mat
                 
-                # สแกนหา Image nodes และเปลี่ยน image
+                # Scan for Image nodes and swap images
                 if new_mat.use_nodes:
                     for node in new_mat.node_tree.nodes:
                         if node.type == 'TEX_IMAGE' and node.image:
                             img_name = node.image.name
                             if img_name in image_mapping:
                                 hashed_filepath = image_mapping[img_name]
-                                # Load image ใหม่เข้า Blender (ถ้ามีอยู่แล้วจะใช้ตัวเดิม)
+                                # Load new image into Blender (reuse if existing)
                                 new_img = bpy.data.images.load(hashed_filepath, check_existing=True)
                                 node.image = new_img
                                 print(f"Material '{new_mat.name}': Swapped image '{img_name}' -> '{new_img.name}'")
             
-            # แทนที่ material เดิมด้วยตัวใหม่ที่แก้แล้ว
+            # Replace original material with the hashed version
             mesh.materials[i] = material_cache[mat.name]

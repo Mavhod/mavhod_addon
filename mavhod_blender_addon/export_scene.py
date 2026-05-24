@@ -9,19 +9,19 @@ from bpy_extras.io_utils import ExportHelper
 
 def get_robust_relpath(target_path, base_path):
 	"""
-	คำนวณหาพาธสัมพัทธ์ (Relative Path) จาก base_path ไปยัง target_path
-	เพื่อให้แน่ใจว่าทั้งสองพาธเป็นพาธสัมบูรณ์ (Absolute Path) และทำการตรวจสอบลิงก์ (Symlinks) ก่อนคำนวณ
+	Calculate relative path from base_path to target_path.
+	Ensures both paths are absolute and resolves symlinks before calculation.
 	"""
 	if not target_path or not base_path: return target_path
-	# แปลงพาธให้เป็นพาธสัมบูรณ์ที่แน่นอน (Resolved Absolute Path)
+	# Convert paths to resolved absolute paths
 	abs_target = os.path.realpath(bpy.path.abspath(target_path))
 	abs_base = os.path.realpath(bpy.path.abspath(base_path))
 	#
 	try:
-		# พยายามหาพาธสัมพัทธ์
+		# Attempt to find relative path
 		return os.path.relpath(abs_target, abs_base)
 	except (ValueError, Exception):
-		# หากพาธอยู่คนละไดรฟ์ (ใน Windows) หรือเกิดข้อผิดพลาดอื่น ให้ส่งคืนพาธสัมบูรณ์เดิม
+		# If paths are on different drives (Windows) or other error occurs, return original absolute path
 		return abs_target
 
 class MavhodExportSettings(bpy.types.Operator, ExportHelper):
@@ -37,7 +37,7 @@ class MavhodExportSettings(bpy.types.Operator, ExportHelper):
 		return {'FINISHED'}
 
 class MavhodExportExecute(bpy.types.Operator):
-	"""ออเปอเรเตอร์การส่งออกหลักที่จะประมวลผลทีละ Mesh เพื่อแสดงแถบความคืบหน้า"""
+	"""Main export operator that processes each Mesh to show a progress bar"""
 	bl_idname = "mavhod_tool.export_execute"
 	bl_label = "Exporting..."
 	bl_options = set()
@@ -65,11 +65,11 @@ class MavhodExportExecute(bpy.types.Operator):
 		return None
 
 	def _get_export_path(self, obj):
-		"""คำนวณหาโฟลเดอร์ต้นทาง สถานะการลิงก์ และพาธการส่งออกที่เกี่ยวข้องทั้งหมด"""
+		"""Calculate source folder, link status, and all relevant export paths"""
 		is_linked = False
-		# ตรวจสอบว่าออบเจกต์มีการลิงก์มาจากไฟล์ Library หรือไม่
+		# Check if object is linked from a library file
 		lib = obj.library or (obj.data.library if obj.data else None)
-		if lib and lib.filepath: # กรณีเป็นออบเจกต์ที่ลิงก์มา (Linked Object)
+		if lib and lib.filepath: # Linked Object case
 			is_linked = True
 			# filepath e.g. "/d/wander/leftway2/model/buildingNurseOffice/nurseOffice.gltf"
 			blend_filepath = os.path.realpath(bpy.path.abspath(lib.filepath))
@@ -87,8 +87,8 @@ class MavhodExportExecute(bpy.types.Operator):
 
 	def _collect_images(self, obj):
 		"""
-		รวบรวมข้อมูล Metadata ของ Texture จาก Material ของออบเจกต์
-		คืนค่าเป็น image_metadata: dict ที่จับคู่ hash sha256 กับ Metadata
+		Collect texture metadata from object materials.
+		Returns image_metadata: dict mapping sha256 hash to metadata.
 		"""
 		image_metadata = {} # hash sha256 -> {src_path, dst_path}
 		for slot in obj.material_slots:
@@ -98,13 +98,13 @@ class MavhodExportExecute(bpy.types.Operator):
 				if not (node.type == 'TEX_IMAGE' and node.image): continue
 				img = node.image
 				if img in image_metadata: continue
-				# ค้นหาพาธไฟล์ต้นฉบับดั้งเดิม (Resolve original source path)
+				# Resolve original source path
 				if img.library and img.library.filepath:
 					lib_dir = os.path.dirname(os.path.realpath(bpy.path.abspath(img.library.filepath)))
 					src_path = os.path.realpath(bpy.path.abspath(img.filepath, start=lib_dir)) if img.filepath else None
 				else:
 					src_path = os.path.realpath(bpy.path.abspath(img.filepath)) if img.filepath else None
-				# สร้าง SHA256 Hash
+				# Create SHA256 Hash
 				hash_obj = hashlib.sha256(src_path.encode('utf-8'))
 				hash_name = hash_obj.hexdigest()
 				#
@@ -116,8 +116,8 @@ class MavhodExportExecute(bpy.types.Operator):
 
 	def _export_and_patch_gltf(self, context, obj, path_info, image_metadata):
 		"""
-		ส่งออก GLTF และทำการปรับแก้ไฟล์ (Patching) โดยการแกะรอยตามโครงสร้างโหนด (Socket -> GLTF)
-		เพื่อให้แน่ใจว่าการอ้างอิงชื่อและ Filter ถูกต้อง 100%
+		Export GLTF and patch the file by tracing node structure (Socket -> GLTF)
+		to ensure name references and filters are 100% correct.
 		"""
 		dst_path = path_info['dst_path']
 		# Ensure destination directory exists
@@ -150,16 +150,16 @@ class MavhodExportExecute(bpy.types.Operator):
 				return
 		else:
 			# Local object export
-			# แยกออบเจกต์ออกมา (Isolate Object)
+			# Isolate Object
 			bpy.ops.object.select_all(action='DESELECT')
 			obj.select_set(True)
 			context.view_layer.objects.active = obj
 			
-			# 1. ทำการ Copy และ Hash Image + Re-bind Material สำหรับ Local Object
+			# 1. Copy and Hash Image + Re-bind Material for Local Object
 			output_dir = os.path.dirname(dst_path)
 			image_mapping = copy_and_hash_images(output_dir)
 			
-			# เก็บรายชื่อ Material เดิมไว้เพื่อคืนค่าหลัง Export เสร็จ
+			# Keep original materials to restore after export
 			original_materials = list(obj.data.materials)
 			
 			try:
@@ -173,12 +173,12 @@ class MavhodExportExecute(bpy.types.Operator):
 					export_apply=True
 				)
 			finally:
-				# คืนค่า Material เดิมให้กับ Object
+				# Restore original materials to object
 				for i, mat in enumerate(original_materials):
 					obj.data.materials[i] = mat
 		#
 		if not os.path.isfile(dst_path): return
-		# 2. อ่านไฟล์ GLTF และทำการแก้ไข (Patching)
+		# 2. Read GLTF file and Patch
 		try:
 			with open(dst_path, 'r', encoding='utf-8') as gf:
 				gltf_data = json.load(gf)
@@ -190,7 +190,7 @@ class MavhodExportExecute(bpy.types.Operator):
 				for img in gltf_data['images']:
 					uri = img.get('uri')
 					if not uri: continue
-					# uri มักจะเป็นชื่อไฟล์ hash.ext ถ้าส่งออกด้วย GLTF_SEPARATE
+					# uri is usually hash.ext if exported with GLTF_SEPARATE
 					file_basename = os.path.basename(uri)
 					hash_name, ext = os.path.splitext(file_basename)
 					
@@ -199,17 +199,17 @@ class MavhodExportExecute(bpy.types.Operator):
 						final_image_dst = meta.get('dst_path')
 						
 						if final_image_dst:
-							# พาธปัจจุบันของไฟล์ภาพที่ถูก Hash ไว้
+							# Current path of the hashed image file
 							current_image_path = os.path.join(gltf_dir, uri)
 							#
 							if os.path.exists(current_image_path):
-								# สร้างโฟลเดอร์ปลายทางสำหรับภาพ
+								# Create destination folder for image
 								os.makedirs(os.path.dirname(final_image_dst), exist_ok=True)
-								# ย้ายไฟล์ภาพไปยังตำแหน่งสุดท้ายตาม image_metadata
+								# Move image file to final location according to image_metadata
 								shutil.move(current_image_path, final_image_dst)	
-								# คำนวณหาพาธสัมพัทธ์จากไฟล์ GLTF ไปยังพาธภาพใหม่
+								# Calculate relative path from GLTF file to new image path
 								rel_uri = get_robust_relpath(final_image_dst, gltf_dir)
-								# GLTF ใช้ forward slashes เสมอ
+								# GLTF always uses forward slashes
 								img['uri'] = rel_uri.replace("\\", "/")
 								img['name'] = os.path.splitext(os.path.basename(final_image_dst))[0]
 								modified = True
@@ -221,11 +221,8 @@ class MavhodExportExecute(bpy.types.Operator):
 		except Exception as e:
 			self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
 
-
-
-
 	def _get_mesh_instance_data(self, obj, path_info):
-		"""เตรียมข้อมูลของ Instance สำหรับการเขียนลงในไฟล์ JSON ผลลัพธ์สุดท้าย"""
+		"""Prepare instance data for writing to the final JSON result file"""
 		local_matrix = obj.matrix_local
 		loc, rot_quat, scale = local_matrix.decompose()
 		return {
@@ -242,45 +239,42 @@ class MavhodExportExecute(bpy.types.Operator):
 		current_index = self._current_index
 		self._current_index += 1
 		obj = self._objects[current_index]
-		# 1. คำนวณพาธสำหรับการส่งออกและตรวจสอบสถานะการลิงก์ (Linked Data)
+		# 1. Calculate export paths and check link status (Linked Data)
 		path_info = self._get_export_path(obj)
 		if path_info['dst_path'] == None: return {'PASS_THROUGH'};
 		is_linked = path_info['is_linked']
-		# อัปเดตข้อความสถานะบนแถบเครื่องมือของ Blender (Header)
+		# Update status message in Blender header
 		status_msg = f"Exporting {'(Linked)' if is_linked else '(Local)'} {current_index + 1}/{len(self._objects)}: {obj.name}"
 		context.workspace.status_text_set(status_msg)
-		# อัปเดตแถบความคืบหน้า (Progress Bar)
+		# Update progress bar
 		wm = context.window_manager
 		wm.progress_update(current_index)
-		# ตรวจสอบว่าโมเดลนี้ยังไม่ได้ถูกส่งออก (เพื่อเลี่ยงการส่งออกซ้ำถ้า Mesh ถูกใช้ในหลายจุด)
+		# Check if this model has already been exported (to avoid duplicate export if Mesh is reused)
 		export_key = f"{path_info['blend_filepath']}|{obj.data.name}" # e.g. "/d/wander/leftway2/level/theme1.blend:Cube.049"
 		if export_key not in self._exported_meshes:
-			# 2. รวบรวมข้อมูลรูปภาพ (Textures) ที่ใช้งานใน Material
+			# 2. Collect image data (Textures) used in Material
 			image_metadata = self._collect_images(obj)
-			# 3. ส่งออกโมเดลเป็น GLTF และทำการปรับแก้ไฟล์ (Patching) เพื่อแก้ไขพาธของภาพและ Filter
+			# 3. Export model as GLTF and Patch file to fix image paths and Filters
 			self._export_and_patch_gltf(context, obj, path_info, image_metadata)
 			self._exported_meshes.add(export_key)
-			# 4. บันทึกข้อมูล Instance ลงในรายการเพื่อเตรียมเขียนไฟล์ JSON ของ Scene รวม
+			# 4. Record instance data for the final scene aggregate JSON file
 			self._mesh_data_for_json.append(self._get_mesh_instance_data(obj, path_info))
 
-		#print(path_info)
-		#print(image_metadata)
-		#print(export_key)
 		return {'PASS_THROUGH'}
 		
 	def invoke(self, context, event):
-		# ฟังก์ชันที่จะทำงานเป็นลำดับแรกเมื่อเริ่มกระบวนการส่งออก
+		# Initial function when export process starts
 		props = context.scene.MavhodToolProps
-		# เริ่มต้นสถานะสำหรับการประมวลผล Modal
+		# Initialize status for Modal processing
 		self._exported_meshes = set()
 		self._current_index = 0
 		self._mesh_data_for_json = []
-		# เก็บรายการที่เลือกไว้แต่แรกเพื่อเอาไว้คืนค่าเดิมหลังงานเสร็จ
+		# Store original selection to restore after work completion
 		self._original_selected = list(context.selected_objects)
 		self._original_active = context.view_layer.objects.active
 		#
 		if not self.filepath:
-			self.report({'WARNING'}, "ไม่ได้กำหนด filepath สำหรับส่งออกฉาก!")
+			self.report({'WARNING'}, "Export filepath not defined!")
 			return {'CANCELLED'}
 		#
 		self._export_scene_path = os.path.realpath(os.path.dirname(self.filepath)) # e.g. "/d/wander/leftway2/level/New Folder"
@@ -291,17 +285,16 @@ class MavhodExportExecute(bpy.types.Operator):
 			if not (pair.source_path and pair.dest_path): continue
 			source_path = os.path.normpath(bpy.path.abspath("//" + pair.source_path))
 			if not os.path.exists(source_path): continue
-			#dest_path = os.path.normpath(bpy.path.abspath(self._export_scene_path + "/" + pair.dest_path))
 			dest_path = pair.dest_path
 			self.path_pairs.append({'source_path': source_path, 'dest_path': dest_path})
-		# เรียงลำดับ self.path_pairs ตาม source_path จากหลังไปหน้า (Z-A)
+		# Sort self.path_pairs by source_path in reverse (Z-A)
 		self.path_pairs.sort(key=lambda x: x['source_path'], reverse=True)
-		# รวบรวมเฉพาะออบเจกต์ประเภท Mesh ที่ถูกเลือกอยู่เท่านั้น
+		# Collect only selected Mesh objects
 		self._objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
 		if not self._objects:
-			self.report({'WARNING'}, "ไม่ได้เลือก Mesh หรือโมเดลใดๆ เลย!")
+			self.report({'WARNING'}, "No Mesh or models selected!")
 			return {'CANCELLED'}
-		# เริ่มต้นแถบความคืบหน้า (Progress Bar) และตัวจับเวลา (Timer)
+		# Start Progress Bar and Timer
 		wm = context.window_manager
 		wm.progress_begin(0, len(self._objects))
 		self._timer = wm.event_timer_add(0.01, window=context.window)
@@ -310,30 +303,30 @@ class MavhodExportExecute(bpy.types.Operator):
 		return {'RUNNING_MODAL'}
 
 	def _finish(self, context):
-		"""ฟังก์ชันทำความสะอาดและสรุปงานหลังจากการประมวลผลทั้งหมดเสร็จสิ้น"""
+		"""Cleanup and summary after all processing is complete"""
 		wm = context.window_manager
 		wm.event_timer_remove(self._timer)
 		wm.progress_end()
-		# ยกเลิกข้อความสถานะใน Header
+		# Clear status message in Header
 		context.workspace.status_text_set(None)
-		# คืนค่ารายการที่เลือก (Selection) ให้เหมือนตอนเริ่มต้นก่อนการส่งออก
+		# Restore original selection
 		bpy.ops.object.select_all(action='DESELECT')
 		for obj in self._original_selected:
 			obj.select_set(True)
 		context.view_layer.objects.active = self._original_active
-		# บันทึกข้อมูล Scene รวมทั้งหมดลงไฟล์ JSON
+		# Save all scene aggregate data to JSON
 		try:
-			# สร้างโฟลเดอร์สำหรับ Save ถ้ายังไม่มี
+			# Create Save folder if it doesn't exist
 			os.makedirs(self._export_scene_path, exist_ok=True)
 			with open(self.filepath, 'w', encoding='utf-8') as f:
 				json.dump({"instances": self._mesh_data_for_json}, f, indent=4)
 		except Exception as e:
-			self.report({'ERROR'}, f"ไม่สามารถบันทึกไฟล์ JSON ได้: {str(e)}")
+			self.report({'ERROR'}, f"Could not save JSON file: {str(e)}")
 			return {'CANCELLED'}
 
 		print("_finish")
 		self.report(
 			{'INFO'},
-			f"เสร็จสมบูรณ์! ส่งออกทั้งหมด {len(self._objects)} ชิ้น, มีโมเดล GLTF ที่ไม่ซ้ำกัน {len(self._exported_meshes)} ไฟล์"
+			f"Completed! Exported {len(self._objects)} items, with {len(self._exported_meshes)} unique GLTF model files"
 		)
 		return {'FINISHED'}
