@@ -19,20 +19,20 @@ if "bpy" in locals():
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
-	from . import create_setting
+	from . import export_setting
 	from . import export_scene
 	imp.reload(import_fbx)
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
 	imp.reload(create_convex)
-	imp.reload(create_setting)
+	imp.reload(export_setting)
 	imp.reload(export_scene)
 else:
 	from . import import_fbx
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
-	from . import create_setting
+	from . import export_setting
 	from . import export_scene
 
 import bpy
@@ -108,7 +108,7 @@ class MavhodToolPanel(bpy.types.Panel):
 		box = layout.box()
 		box.label(text="Export", icon="EXPORT")
 		col = box.column(align=True)
-		col.operator("mavhod_tool.create_setting", text="Create Setting", icon="PRESET")
+		col.operator("mavhod_tool.export_setting", text="Export Setting", icon="PRESET")
 		col.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
 
 		# ========== MESH TOOLS SECTION ==========
@@ -127,11 +127,11 @@ classes = (
 	import_gltf.ImportGLTFFiles,
 	arrange_meshes.ArrangeSelectedMeshes,
 	create_convex.CreateConvexHull,
-	create_setting.MavhodAddPathPair,
-	create_setting.MavhodRemovePathPair,
-	create_setting.MavhodCreateSetting,
-	create_setting.MavhodLoadSettingsJSON,
-	create_setting.MavhodSaveSettingsJSON,
+	export_setting.MavhodAddPathPair,
+	export_setting.MavhodRemovePathPair,
+	export_setting.MavhodExportSetting,
+	export_setting.MavhodLoadSettingsJSON,
+	export_setting.MavhodSaveSettingsJSON,
 	export_scene.MavhodExportSettings,
 	export_scene.MavhodExportExecute,
 	MavhodToolPanel,

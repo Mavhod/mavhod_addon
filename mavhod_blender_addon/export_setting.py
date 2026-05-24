@@ -105,10 +105,10 @@ class MavhodLoadSettingsJSON(bpy.types.Operator, ImportHelper):
 
         return {'FINISHED'}
 
-class MavhodCreateSetting(bpy.types.Operator):
+class MavhodExportSetting(bpy.types.Operator):
     """Open dialog to configure source and destination path pairs"""
-    bl_idname = "mavhod_tool.create_setting"
-    bl_label = "Create Setting"
+    bl_idname = "mavhod_tool.export_setting"
+    bl_label = "Export Setting"
     bl_options = {'REGISTER', 'UNDO'}
 
     def invoke(self, context, event):
