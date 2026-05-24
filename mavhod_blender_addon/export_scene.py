@@ -57,7 +57,11 @@ class MavhodExportExecute(bpy.types.Operator):
 		for pair in self.path_pairs:
 			if pair['source_path'] in src_path:
 				rel_source = get_robust_relpath(src_path, pair['source_path'])
-				return os.path.realpath(f"{self._export_scene_path}/{pair['dest_path']}/{rel_source}")
+				dest_path = pair['dest_path']
+				# Resolve Blender-relative paths or ensure absolute paths are clean
+				if dest_path.startswith("//") or dest_path.startswith("/"):
+					dest_path = bpy.path.abspath(dest_path)
+				return os.path.realpath(os.path.join(self._export_scene_path, dest_path, rel_source))
 		return None
 
 	def _get_export_path(self, obj):
@@ -73,7 +77,7 @@ class MavhodExportExecute(bpy.types.Operator):
 			dst_path = self._get_dst_path(filepath)
 		else:
 			blend_filepath = os.path.realpath(bpy.data.filepath)
-			dst_path = f"{self._export_scene_path}/{obj.data.name}.gltf"
+			dst_path = f"{self._export_scene_path}/{self._blend_filename}/{obj.data.name}.gltf"
 		#	
 		return {
 			'is_linked': is_linked,
@@ -280,6 +284,7 @@ class MavhodExportExecute(bpy.types.Operator):
 			return {'CANCELLED'}
 		#
 		self._export_scene_path = os.path.realpath(os.path.dirname(self.filepath)) # e.g. "/d/wander/leftway2/level/New Folder"
+		self._blend_filename = os.path.splitext(os.path.basename(bpy.data.filepath))[0]
 		#
 		self.path_pairs = []
 		for pair in props.path_pairs:
