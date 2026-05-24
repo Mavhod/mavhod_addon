@@ -98,16 +98,6 @@ class MavhodLoadSettingsJSON(bpy.types.Operator, ImportHelper):
                 pair.source_path = item.get("source_path", "")
                 pair.dest_path = item.get("dest_path", "")
             
-            # 2. Load texture map flags
-            tex_data = data.get("export_texture_maps", {})
-            props.export_albedo = tex_data.get("albedo", True)
-            props.export_metallic = tex_data.get("metallic", True)
-            props.export_roughness = tex_data.get("roughness", True)
-            props.export_normal = tex_data.get("normal", True)
-            props.export_emission = tex_data.get("emission", True)
-            props.export_alpha = tex_data.get("alpha", True)
-            props.export_ao = tex_data.get("ao", True)
-            
             self.report({'INFO'}, f"Loaded settings from {self.filepath}")
         except Exception as e:
             self.report({'ERROR'}, f"Failed to load settings: {str(e)}")
@@ -143,21 +133,7 @@ class MavhodCreateSetting(bpy.types.Operator):
             remove_op.index = i
             
         layout.operator("mavhod_tool.add_path_pair", text="Add Path Pair", icon="ADD")
-        
-        layout.separator()
-        
-        # Texture Map Export Settings
-        col = layout.column(align=True)
-        col.label(text="Export Texture Maps:")
-        flow = col.grid_flow(row_major=True, columns=2, even_columns=True, even_rows=False, align=True)
-        flow.prop(props, "export_albedo")
-        flow.prop(props, "export_metallic")
-        flow.prop(props, "export_roughness")
-        flow.prop(props, "export_normal")
-        flow.prop(props, "export_emission")
-        flow.prop(props, "export_alpha")
-        flow.prop(props, "export_ao")
-
+ 
         layout.separator()
         row = layout.row(align=True)
         row.operator("mavhod_tool.load_settings_json", text="Load", icon="FILE_FOLDER")

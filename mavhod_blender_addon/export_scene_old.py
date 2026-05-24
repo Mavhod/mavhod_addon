@@ -14,22 +14,6 @@ class MavhodExportExecute(bpy.types.Operator):
 	_mesh_data_for_json = []
 
 
-
-	# จับคู่ชื่อ Input ของโหนด FePBR หรือ Principled BSDF กับคีย์ของสถานะการส่งออก
-	INPUT_TO_FLAG = {
-		'Albedo Map': '_export_albedo',
-		'Base Color': '_export_albedo',
-		'Metallic': '_export_metallic',
-		'Roughness': '_export_roughness',
-		'Normal Map': '_export_normal',
-		'Normal': '_export_normal',
-		'Emission': '_export_emission',
-		'Emission Color': '_export_emission',
-		'Alpha Map': '_export_alpha',
-		'Alpha': '_export_alpha',
-		'AO': '_export_ao'
-	}
-
 	def modal(self, context, event):
 
 
