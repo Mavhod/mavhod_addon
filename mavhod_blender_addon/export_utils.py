@@ -59,6 +59,8 @@ def copy_and_hash_images(output_dir):
 def rebind_materials_to_hashed_images(image_mapping):
     """
     Duplicate materials and update them to use new images according to image_mapping.
+    Returns a mapping of { actual_blender_name: original_name } so the caller can
+    restore original names in the exported GLTF (Blender may append .001, .002, etc.).
     """
     material_cache = {} # Mapping: { original_material_name: new_material }
     
@@ -93,3 +95,7 @@ def rebind_materials_to_hashed_images(image_mapping):
             
             # Replace original material with the hashed version
             mesh.materials[i] = material_cache[mat.name]
+
+    # Return mapping: { actual_blender_assigned_name -> original_name }
+    # new_mat.name may differ from f"{original}_hashed" if Blender appended .001, .002, etc.
+    return {new_mat.name: original_name for original_name, new_mat in material_cache.items()}
