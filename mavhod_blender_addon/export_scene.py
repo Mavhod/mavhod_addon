@@ -1,4 +1,5 @@
 import bpy
+import re
 import json
 import os
 import shutil
@@ -163,8 +164,8 @@ class MavhodExportExecute(bpy.types.Operator):
 			original_materials = list(obj.data.materials)
 			
 			try:
-				# material_name_mapping: { actual_blender_name -> original_name }
-				material_name_mapping = rebind_materials_to_hashed_images(image_mapping)
+				# Re-bind materials to use hashed image paths before export
+				rebind_materials_to_hashed_images(image_mapping)
 				
 				bpy.ops.export_scene.gltf(
 					filepath=dst_path,
@@ -183,7 +184,7 @@ class MavhodExportExecute(bpy.types.Operator):
 		try:
 			with open(dst_path, 'r', encoding='utf-8') as gf:
 				gltf_data = json.load(gf)
-			
+
 			gltf_dir = os.path.dirname(dst_path)
 			modified = False
 			
@@ -215,14 +216,15 @@ class MavhodExportExecute(bpy.types.Operator):
 								img['name'] = os.path.splitext(os.path.basename(final_image_dst))[0]
 								modified = True
 								print(f"Patched image uri: {uri} -> {img['uri']} and moved to {final_image_dst}")
-
-			# Restore original material names using the exact mapping from rebind_materials_to_hashed_images
-			# (Blender may assign names like _hashed.001, _hashed.002, etc. to avoid conflicts)
-			if 'materials' in gltf_data and material_name_mapping:
+			
+			# Restore original material names by stripping _hashed suffixes from the end
+			# Blender may assign names like Mat_hashed, Mat_hashed.001, Mat_hashed.002, etc.
+			if 'materials' in gltf_data:
 				for mat in gltf_data['materials']:
-					original = material_name_mapping.get(mat.get('name'))
-					if original:
-						mat['name'] = original
+					name = mat.get('name', '')
+					clean = re.sub(r'_hashed(\.\d+)?$', '', name)
+					if clean != name:
+						mat['name'] = clean
 						modified = True
 
 			if modified:
