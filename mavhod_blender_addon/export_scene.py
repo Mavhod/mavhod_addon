@@ -188,6 +188,14 @@ class MavhodExportExecute(bpy.types.Operator):
 			gltf_dir = os.path.dirname(dst_path)
 			modified = False
 			
+			# 0. Strip Node transformations (to make it identity/centered)
+			if 'nodes' in gltf_data:
+				for node in gltf_data['nodes']:
+					for key in ['translation', 'rotation', 'scale', 'matrix']:
+						if key in node:
+							del node[key]
+							modified = True
+			
 			if 'images' in gltf_data:
 				for img in gltf_data['images']:
 					uri = img.get('uri')
