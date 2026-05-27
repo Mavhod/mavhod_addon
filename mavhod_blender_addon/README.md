@@ -1,13 +1,12 @@
 # Mavhod Blender Addon
 
-A Blender addon for improved asset workflow, specifically designed for importing GLTF/FBX models and managing their materials with an optimized FePBR setup.
+A Blender addon for improved asset workflow, specifically designed for importing GLTF/FBX models and managing their materials.
 
 ## Features
 
 ### 1. Advanced GLTF Import
 - **Batch Import**: Select and import multiple `.gltf` or `.glb` files at once.
-- **Auto-Material Conversion**: Automatically converts imported materials to a custom **FePBR** shader setup.
-- **Node Preservation**: Preserves original texture mapping (UVs, Transforms) and other node connections while splicing in the FePBR shader.
+- **Auto-Material Preserve**: Preserves original materials and texture mapping (UVs, Transforms) during import.
 - **Multi-Material Support**: Handles meshes with multiple material slots correctly.
 
 ### 2. FBX Import Tools
@@ -35,7 +34,7 @@ A Blender addon for improved asset workflow, specifically designed for importing
 1. **Import GLTF**:
    - Go to `File` > `Import` > `Mavhod GLTF Import` (or check the N-Panel / specific menu location).
    - Select your `.gltf`/`.glb` files.
-   - The addon will import them and automatically set up the FePBR materials.
+   - The addon will import them and preserve their standard materials.
 
 ## Credits & Acknowledgments
 

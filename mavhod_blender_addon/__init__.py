@@ -4,7 +4,7 @@ bl_info = {
 	"version": (1, 0, 0),
 	"blender": (4, 2, 0),
 	"location": "View3D > Mavhod Tool",
-	"description": "Tools for importing FBX/GLTF with FePBR materials and mesh arrangement",
+	"description": "Tools for importing FBX/GLTF materials and mesh arrangement",
 	"category": "Import-Export",
 	"doc_url": "",
 	"tracker_url": "",
