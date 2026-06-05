@@ -33,6 +33,7 @@ def main():
                 obj.select_set(True)
                 bpy.context.view_layer.objects.active = obj
                 found = True
+                break
         
         if not found:
             print(f"Warning: Mesh data '{args.mesh}' not found in the scene.")

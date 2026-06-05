@@ -243,8 +243,8 @@ class MavhodExportExecute(bpy.types.Operator):
 
 	def _get_mesh_instance_data(self, obj, path_info):
 		"""Prepare instance data for writing to the final JSON result file"""
-		local_matrix = obj.matrix_local
-		loc, rot_quat, scale = local_matrix.decompose()
+		world_matrix = obj.matrix_world
+		loc, rot_quat, scale = world_matrix.decompose()
 		return {
 			"name": obj.name,
 			"asset_path": get_robust_relpath(path_info['dst_path'], self._export_scene_path),
@@ -277,8 +277,9 @@ class MavhodExportExecute(bpy.types.Operator):
 			# 3. Export model as GLTF and Patch file to fix image paths and Filters
 			self._export_and_patch_gltf(context, obj, path_info, image_metadata)
 			self._exported_meshes.add(export_key)
-			# 4. Record instance data for the final scene aggregate JSON file
-			self._mesh_data_for_json.append(self._get_mesh_instance_data(obj, path_info))
+
+		# 4. Record instance data for the final scene aggregate JSON file (for every instance!)
+		self._mesh_data_for_json.append(self._get_mesh_instance_data(obj, path_info))
 
 		return {'PASS_THROUGH'}
 		
