@@ -82,6 +82,16 @@ class MavhodToolSceneProps(bpy.types.PropertyGroup):
 	export_emission: bpy.props.BoolProperty(name="Emission", default=True)
 	export_alpha: bpy.props.BoolProperty(name="Alpha", default=True)
 	export_ao: bpy.props.BoolProperty(name="AO", default=True)
+	scene_extension: bpy.props.StringProperty(
+		name="Scene Extension",
+		description="File extension for the exported scene data",
+		default=".json"
+	)
+	object_extension: bpy.props.StringProperty(
+		name="Object Extension",
+		description="File extension for exported objects",
+		default=".gltf"
+	)
 	fbx_files: bpy.props.CollectionProperty(type=FBXFileItem)
 	path_pairs: bpy.props.CollectionProperty(type=MavhodPathPair)
 

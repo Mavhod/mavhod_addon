@@ -42,6 +42,8 @@ class MavhodSaveSettingsJSON(bpy.types.Operator, ExportHelper):
     def execute(self, context):
         props = context.scene.MavhodToolProps
         data = {
+            "scene_extension": props.scene_extension,
+            "object_extension": props.object_extension,
             "path_pairs": [],
             "export_texture_maps": {
                 "albedo": props.export_albedo,
@@ -98,6 +100,12 @@ class MavhodLoadSettingsJSON(bpy.types.Operator, ImportHelper):
                 pair.source_path = item.get("source_path", "")
                 pair.dest_path = item.get("dest_path", "")
             
+            # 2. Load extensions
+            if "scene_extension" in data:
+                props.scene_extension = data["scene_extension"]
+            if "object_extension" in data:
+                props.object_extension = data["object_extension"]
+            
             self.report({'INFO'}, f"Loaded settings from {self.filepath}")
         except Exception as e:
             self.report({'ERROR'}, f"Failed to load settings: {str(e)}")
@@ -119,6 +127,12 @@ class MavhodExportSetting(bpy.types.Operator):
         props = context.scene.MavhodToolProps
         
         layout.label(text="Configure Source and Destination Paths:")
+        
+        col_ext = layout.column(align=True)
+        col_ext.prop(props, "scene_extension", text="Scene Extension")
+        col_ext.prop(props, "object_extension", text="Object Extension")
+        
+        layout.separator()
         
         col = layout.column(align=True)
         for i, pair in enumerate(props.path_pairs):

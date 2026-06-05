@@ -33,6 +33,15 @@ class MavhodExportSettings(bpy.types.Operator, ExportHelper):
 	filename_ext = ".json"
 	filter_glob: bpy.props.StringProperty(default="*.json", options={'HIDDEN'}, maxlen=255,)
 
+	def invoke(self, context, event):
+		props = context.scene.MavhodToolProps
+		ext = props.scene_extension
+		if not ext.startswith("."):
+			ext = "." + ext
+		self.filename_ext = ext
+		self.filter_glob = "*" + ext
+		return super().invoke(context, event)
+
 	def execute(self, context):
 		bpy.ops.mavhod_tool.export_execute('INVOKE_DEFAULT', filepath=self.filepath)
 		return {'FINISHED'}
@@ -67,6 +76,7 @@ class MavhodExportExecute(bpy.types.Operator):
 
 	def _get_export_path(self, obj):
 		"""Calculate source folder, link status, and all relevant export paths"""
+		props = bpy.context.scene.MavhodToolProps
 		is_linked = False
 		# Check if object is linked from a library file
 		lib = obj.library or (obj.data.library if obj.data else None)
@@ -179,6 +189,11 @@ class MavhodExportExecute(bpy.types.Operator):
 				for i, mat in enumerate(original_materials):
 					obj.data.materials[i] = mat
 		#
+		props = bpy.context.scene.MavhodToolProps
+		object_ext = props.object_extension
+		if not object_ext.startswith("."):
+			object_ext = "." + object_ext
+		# Blender always exports .gltf with dst_path as filename
 		if not os.path.isfile(dst_path): return
 		# 2. Read GLTF file and Patch
 		try:
@@ -235,19 +250,37 @@ class MavhodExportExecute(bpy.types.Operator):
 						mat['name'] = clean
 						modified = True
 
-			if modified:
-				with open(dst_path, 'w', encoding='utf-8') as gf:
+			# Determine final output path based on configured extension
+			dst_ext = os.path.splitext(dst_path)[1]
+			if dst_ext.lower() != object_ext.lower():
+				# Write to new path with correct extension
+				final_path = os.path.splitext(dst_path)[0] + object_ext
+			else:
+				final_path = dst_path
+			if modified or final_path != dst_path:
+				with open(final_path, 'w', encoding='utf-8') as gf:
 					json.dump(gltf_data, gf, indent=4)
+				# Remove old .gltf file if we renamed to a different extension
+				if final_path != dst_path and os.path.isfile(dst_path):
+					os.remove(dst_path)
 		except Exception as e:
 			self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
 
 	def _get_mesh_instance_data(self, obj, path_info):
 		"""Prepare instance data for writing to the final JSON result file"""
+		props = bpy.context.scene.MavhodToolProps
+		object_ext = props.object_extension
+		if not object_ext.startswith("."):
+			object_ext = "." + object_ext
+			
+		# Determine the final path with the correct extension
+		final_path = os.path.splitext(path_info['dst_path'])[0] + object_ext
+		
 		world_matrix = obj.matrix_world
 		loc, rot_quat, scale = world_matrix.decompose()
 		return {
 			"name": obj.name,
-			"asset_path": get_robust_relpath(path_info['dst_path'], self._export_scene_path),
+			"asset_path": get_robust_relpath(final_path, self._export_scene_path),
 			"location": {"x": loc.x, "y": loc.y, "z": loc.z},
 			"rotation": {"x": rot_quat.x, "y": rot_quat.y, "z": rot_quat.z, "w": rot_quat.w},
 			"scale": {"x": scale.x, "y": scale.y, "z": scale.z}
