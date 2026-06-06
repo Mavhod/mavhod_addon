@@ -75,13 +75,12 @@ class MavhodToolSceneProps(bpy.types.PropertyGroup):
 		default="",
 		subtype='DIR_PATH'
 	)
-	export_albedo: bpy.props.BoolProperty(name="Albedo", default=True)
-	export_metallic: bpy.props.BoolProperty(name="Metallic", default=True)
-	export_roughness: bpy.props.BoolProperty(name="Roughness", default=True)
-	export_normal: bpy.props.BoolProperty(name="Normal", default=True)
-	export_emission: bpy.props.BoolProperty(name="Emission", default=True)
-	export_alpha: bpy.props.BoolProperty(name="Alpha", default=True)
-	export_ao: bpy.props.BoolProperty(name="AO", default=True)
+	export_metadata_node: bpy.props.BoolProperty(name="Node", default=True)
+	export_metadata_mesh: bpy.props.BoolProperty(name="Mesh", default=True)
+	export_metadata_material: bpy.props.BoolProperty(name="Material", default=True)
+	export_metadata_scene: bpy.props.BoolProperty(name="Scene (glTF)", default=True)
+	export_metadata_instance: bpy.props.BoolProperty(name="Instance (JSON)", default=True)
+	export_metadata_level: bpy.props.BoolProperty(name="Level (JSON)", default=True)
 	scene_extension: bpy.props.StringProperty(
 		name="Scene Extension",
 		description="File extension for the exported scene data",

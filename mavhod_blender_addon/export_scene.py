@@ -127,18 +127,21 @@ class MavhodExportExecute(bpy.types.Operator):
 
 	def _export_and_patch_gltf(self, context, obj, path_info, image_metadata):
 		"""
-		Export GLTF and patch the file by tracing node structure (Socket -> GLTF)
-		to ensure name references and filters are 100% correct.
+		Export GLTF and patch the file using utility functions.
 		"""
 		dst_path = path_info['dst_path']
+		props = bpy.context.scene.MavhodToolProps
+		object_ext = props.object_extension
+		if not object_ext.startswith("."):
+			object_ext = "." + object_ext
+			
 		# Ensure destination directory exists
-		dst_dir = os.path.dirname(path_info['dst_path'])
+		dst_dir = os.path.dirname(dst_path)
 		os.makedirs(dst_dir, exist_ok=True)
 		
 		if path_info['is_linked']:
 			# Use subprocess to export linked mesh data
 			blender_bin = bpy.app.binary_path
-			# export_bg.py is expected to be in the same directory as this script
 			script_path = os.path.join(os.path.dirname(__file__), "export_bg.py")
 			blend_file = path_info['blend_filepath']
 			mesh_name = obj.data.name
@@ -150,8 +153,14 @@ class MavhodExportExecute(bpy.types.Operator):
 				"-P", script_path,
 				"--",
 				"--output", dst_path,
-				"--mesh", mesh_name
+				"--mesh", mesh_name,
+				"--object_ext", object_ext
 			]
+			# Pass metadata flags
+			if props.export_metadata_node: cmd.append("--metadata_node")
+			if props.export_metadata_mesh: cmd.append("--metadata_mesh")
+			if props.export_metadata_material: cmd.append("--metadata_material")
+			if props.export_metadata_scene: cmd.append("--metadata_scene")
 			
 			print(f"Running subprocess: {' '.join(cmd)}")
 			try:
@@ -172,99 +181,37 @@ class MavhodExportExecute(bpy.types.Operator):
 			
 			# Keep original materials to restore after export
 			original_materials = list(obj.data.materials)
-			
 			try:
 				# Re-bind materials to use hashed image paths before export
 				rebind_materials_to_hashed_images(image_mapping)
+				
+				# Export extras if any glTF-related metadata is enabled
+				use_extras = props.export_metadata_node or props.export_metadata_mesh or \
+							 props.export_metadata_material or props.export_metadata_scene
 				
 				bpy.ops.export_scene.gltf(
 					filepath=dst_path,
 					use_selection=True,
 					export_format='GLTF_SEPARATE',
 					export_image_format='AUTO',
-					export_apply=True
+					export_apply=True,
+					export_extras=use_extras
 				)
 			finally:
 				# Restore original materials to object
 				for i, mat in enumerate(original_materials):
 					obj.data.materials[i] = mat
-		#
-		props = bpy.context.scene.MavhodToolProps
-		object_ext = props.object_extension
-		if not object_ext.startswith("."):
-			object_ext = "." + object_ext
-		# Blender always exports .gltf with dst_path as filename
-		if not os.path.isfile(dst_path): return
-		# 2. Read GLTF file and Patch
-		try:
-			with open(dst_path, 'r', encoding='utf-8') as gf:
-				gltf_data = json.load(gf)
+			
+			# 2. Patch and Filter output using utility
+			from .export_utils import patch_gltf_output
+			metadata_settings = {
+				'node': props.export_metadata_node,
+				'mesh': props.export_metadata_mesh,
+				'material': props.export_metadata_material,
+				'scene': props.export_metadata_scene
+			}
+			patch_gltf_output(dst_path, metadata_settings, image_metadata, object_ext)
 
-			gltf_dir = os.path.dirname(dst_path)
-			modified = False
-			
-			# 0. Strip Node transformations (to make it identity/centered)
-			if 'nodes' in gltf_data:
-				for node in gltf_data['nodes']:
-					for key in ['translation', 'rotation', 'scale', 'matrix']:
-						if key in node:
-							del node[key]
-							modified = True
-			
-			if 'images' in gltf_data:
-				for img in gltf_data['images']:
-					uri = img.get('uri')
-					if not uri: continue
-					# uri is usually hash.ext if exported with GLTF_SEPARATE
-					file_basename = os.path.basename(uri)
-					hash_name, ext = os.path.splitext(file_basename)
-					
-					if hash_name in image_metadata:
-						meta = image_metadata[hash_name]
-						final_image_dst = meta.get('dst_path')
-						
-						if final_image_dst:
-							# Current path of the hashed image file
-							current_image_path = os.path.join(gltf_dir, uri)
-							#
-							if os.path.exists(current_image_path):
-								# Create destination folder for image
-								os.makedirs(os.path.dirname(final_image_dst), exist_ok=True)
-								# Move image file to final location according to image_metadata
-								shutil.move(current_image_path, final_image_dst)	
-								# Calculate relative path from GLTF file to new image path
-								rel_uri = get_robust_relpath(final_image_dst, gltf_dir)
-								# GLTF always uses forward slashes
-								img['uri'] = rel_uri.replace("\\", "/")
-								img['name'] = os.path.splitext(os.path.basename(final_image_dst))[0]
-								modified = True
-								print(f"Patched image uri: {uri} -> {img['uri']} and moved to {final_image_dst}")
-			
-			# Restore original material names by stripping _hashed suffixes from the end
-			# Blender may assign names like Mat_hashed, Mat_hashed.001, Mat_hashed.002, etc.
-			if 'materials' in gltf_data:
-				for mat in gltf_data['materials']:
-					name = mat.get('name', '')
-					clean = re.sub(r'_hashed(\.\d+)?$', '', name)
-					if clean != name:
-						mat['name'] = clean
-						modified = True
-
-			# Determine final output path based on configured extension
-			dst_ext = os.path.splitext(dst_path)[1]
-			if dst_ext.lower() != object_ext.lower():
-				# Write to new path with correct extension
-				final_path = os.path.splitext(dst_path)[0] + object_ext
-			else:
-				final_path = dst_path
-			if modified or final_path != dst_path:
-				with open(final_path, 'w', encoding='utf-8') as gf:
-					json.dump(gltf_data, gf, indent=4)
-				# Remove old .gltf file if we renamed to a different extension
-				if final_path != dst_path and os.path.isfile(dst_path):
-					os.remove(dst_path)
-		except Exception as e:
-			self.report({'WARNING'}, f"Could not patch GLTF textures: {str(e)}")
 
 	def _get_mesh_instance_data(self, obj, path_info):
 		"""Prepare instance data for writing to the final JSON result file"""
@@ -278,13 +225,27 @@ class MavhodExportExecute(bpy.types.Operator):
 		
 		world_matrix = obj.matrix_world
 		loc, rot_quat, scale = world_matrix.decompose()
-		return {
+		
+		data = {
 			"name": obj.name,
 			"asset_path": get_robust_relpath(final_path, self._export_scene_path),
 			"location": {"x": loc.x, "y": loc.y, "z": loc.z},
 			"rotation": {"x": rot_quat.x, "y": rot_quat.y, "z": rot_quat.z, "w": rot_quat.w},
 			"scale": {"x": scale.x, "y": scale.y, "z": scale.z}
 		}
+		
+		if props.export_metadata_instance:
+			extras = {}
+			for key in obj.keys():
+				if key == "_RNA_UI": continue
+				val = obj[key]
+				if hasattr(val, "to_list"):
+					val = val.to_list()
+				extras[key] = val
+			if extras:
+				data["metadata"] = extras
+				
+		return data
 
 	def modal(self, context, event):
 		if event.type != 'TIMER': return {'PASS_THROUGH'};
@@ -372,8 +333,23 @@ class MavhodExportExecute(bpy.types.Operator):
 		try:
 			# Create Save folder if it doesn't exist
 			os.makedirs(self._export_scene_path, exist_ok=True)
+			
+			scene_data = {"instances": self._mesh_data_for_json}
+			
+			props = context.scene.MavhodToolProps
+			if props.export_metadata_level:
+				level_extras = {}
+				for key in bpy.context.scene.keys():
+					if key == "_RNA_UI": continue
+					val = bpy.context.scene[key]
+					if hasattr(val, "to_list"):
+						val = val.to_list()
+					level_extras[key] = val
+				if level_extras:
+					scene_data["metadata"] = level_extras
+			
 			with open(self.filepath, 'w', encoding='utf-8') as f:
-				json.dump({"instances": self._mesh_data_for_json}, f, indent=4)
+				json.dump(scene_data, f, indent=4)
 		except Exception as e:
 			self.report({'ERROR'}, f"Could not save JSON file: {str(e)}")
 			return {'CANCELLED'}

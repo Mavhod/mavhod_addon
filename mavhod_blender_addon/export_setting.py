@@ -45,14 +45,13 @@ class MavhodSaveSettingsJSON(bpy.types.Operator, ExportHelper):
             "scene_extension": props.scene_extension,
             "object_extension": props.object_extension,
             "path_pairs": [],
-            "export_texture_maps": {
-                "albedo": props.export_albedo,
-                "metallic": props.export_metallic,
-                "roughness": props.export_roughness,
-                "normal": props.export_normal,
-                "emission": props.export_emission,
-                "alpha": props.export_alpha,
-                "ao": props.export_ao
+            "export_metadata": {
+                "metadata_node": props.export_metadata_node,
+                "metadata_mesh": props.export_metadata_mesh,
+                "metadata_material": props.export_metadata_material,
+                "metadata_scene": props.export_metadata_scene,
+                "metadata_instance": props.export_metadata_instance,
+                "metadata_level": props.export_metadata_level
             }
         }
         for pair in props.path_pairs:
@@ -106,6 +105,15 @@ class MavhodLoadSettingsJSON(bpy.types.Operator, ImportHelper):
             if "object_extension" in data:
                 props.object_extension = data["object_extension"]
             
+            if "export_metadata" in data:
+                tex_data = data["export_metadata"]
+                props.export_metadata_node = tex_data.get("metadata_node", True)
+                props.export_metadata_mesh = tex_data.get("metadata_mesh", True)
+                props.export_metadata_material = tex_data.get("metadata_material", True)
+                props.export_metadata_scene = tex_data.get("metadata_scene", True)
+                props.export_metadata_instance = tex_data.get("metadata_instance", True)
+                props.export_metadata_level = tex_data.get("metadata_level", True)
+            
             self.report({'INFO'}, f"Loaded settings from {self.filepath}")
         except Exception as e:
             self.report({'ERROR'}, f"Failed to load settings: {str(e)}")
@@ -129,8 +137,23 @@ class MavhodExportSetting(bpy.types.Operator):
         layout.label(text="Configure Source and Destination Paths:")
         
         col_ext = layout.column(align=True)
-        col_ext.prop(props, "scene_extension", text="Scene Extension")
         col_ext.prop(props, "object_extension", text="Object Extension")
+        
+        layout.label(text="Export Metadata:")
+        box_meta = layout.box()
+        col_meta = box_meta.column(align=True)
+        col_meta.label(text="GLTF Content:")
+        row_meta1 = col_meta.row(align=True)
+        row_meta1.prop(props, "export_metadata_node", text="Node")
+        row_meta1.prop(props, "export_metadata_mesh", text="Mesh")
+        row_meta1.prop(props, "export_metadata_material", text="Material")
+        row_meta1.prop(props, "export_metadata_scene", text="Scene")
+        
+        col_meta.separator()
+        col_meta.label(text="Aggregate JSON:")
+        row_meta2 = col_meta.row(align=True)
+        row_meta2.prop(props, "export_metadata_instance", text="Instance")
+        row_meta2.prop(props, "export_metadata_level", text="Level (Global)")
         
         layout.separator()
         

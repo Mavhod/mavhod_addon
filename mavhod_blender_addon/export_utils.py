@@ -2,6 +2,119 @@ import bpy
 import os
 import shutil
 import hashlib
+import json
+import re
+
+def get_robust_relpath(target_path, base_path):
+    """
+    Calculate relative path from base_path to target_path.
+    Ensures both paths are absolute and resolves symlinks before calculation.
+    """
+    if not target_path or not base_path: return target_path
+    abs_target = os.path.realpath(bpy.path.abspath(target_path))
+    abs_base = os.path.realpath(bpy.path.abspath(base_path))
+    try:
+        return os.path.relpath(abs_target, abs_base)
+    except (ValueError, Exception):
+        return abs_target
+
+def patch_gltf_output(dst_path, metadata_settings, image_metadata=None, object_ext=".gltf"):
+    """
+    Post-process GLTF output:
+    1. Strip node transformations (identity).
+    2. Patch image URIs using image_metadata.
+    3. Remove hashed suffixes from material names.
+    4. Filter metadata (extras) from nodes, meshes, materials, and scenes.
+    5. Handle file extension renaming.
+    """
+    if not os.path.isfile(dst_path):
+        return
+
+    try:
+        with open(dst_path, 'r', encoding='utf-8') as f:
+            gltf_data = json.load(f)
+
+        gltf_dir = os.path.dirname(dst_path)
+        modified = False
+
+        # 1. Strip Node transformations
+        if 'nodes' in gltf_data:
+            for node in gltf_data['nodes']:
+                for key in ['translation', 'rotation', 'scale', 'matrix']:
+                    if key in node:
+                        del node[key]
+                        modified = True
+                # Filter Node Metadata
+                if not metadata_settings.get('node', True) and 'extras' in node:
+                    del node['extras']
+                    modified = True
+
+        # 2. Patch image URIs
+        if image_metadata and 'images' in gltf_data:
+            for img in gltf_data['images']:
+                uri = img.get('uri')
+                if not uri: continue
+                file_basename = os.path.basename(uri)
+                hash_name, ext = os.path.splitext(file_basename)
+                
+                if hash_name in image_metadata:
+                    meta = image_metadata[hash_name]
+                    final_image_dst = meta.get('dst_path')
+                    if final_image_dst:
+                        current_image_path = os.path.join(gltf_dir, uri)
+                        if os.path.exists(current_image_path):
+                            os.makedirs(os.path.dirname(final_image_dst), exist_ok=True)
+                            shutil.move(current_image_path, final_image_dst)
+                            rel_uri = get_robust_relpath(final_image_dst, gltf_dir)
+                            img['uri'] = rel_uri.replace("\\", "/")
+                            img['name'] = os.path.splitext(os.path.basename(final_image_dst))[0]
+                            modified = True
+
+        # 3. Clean Material Names and Filter Material Metadata
+        if 'materials' in gltf_data:
+            for mat in gltf_data['materials']:
+                if not metadata_settings.get('material', True) and 'extras' in mat:
+                    del mat['extras']
+                    modified = True
+                name = mat.get('name', '')
+                clean = re.sub(r'_hashed(\.\d+)?$', '', name)
+                if clean != name:
+                    mat['name'] = clean
+                    modified = True
+
+        # 4. Filter Mesh Metadata
+        if not metadata_settings.get('mesh', True) and 'meshes' in gltf_data:
+            for mesh in gltf_data['meshes']:
+                if 'extras' in mesh:
+                    del mesh['extras']
+                    modified = True
+                for primitive in mesh.get('primitives', []):
+                    if 'extras' in primitive:
+                        del primitive['extras']
+                        modified = True
+
+        # 5. Filter Scene Metadata
+        if not metadata_settings.get('scene', True) and 'scenes' in gltf_data:
+            for scene in gltf_data['scenes']:
+                if 'extras' in scene:
+                    del scene['extras']
+                    modified = True
+
+        # Determine final output path
+        dst_ext = os.path.splitext(dst_path)[1]
+        if dst_ext.lower() != object_ext.lower():
+            final_path = os.path.splitext(dst_path)[0] + object_ext
+        else:
+            final_path = dst_path
+
+        if modified or final_path != dst_path:
+            with open(final_path, 'w', encoding='utf-8') as f:
+                json.dump(gltf_data, f, indent=4)
+            if final_path != dst_path and os.path.isfile(dst_path):
+                os.remove(dst_path)
+
+    except Exception as e:
+        print(f"Error patching GLTF {dst_path}: {str(e)}")
 
 def get_images_from_materials():
     """Find all images used in materials of currently selected objects."""
