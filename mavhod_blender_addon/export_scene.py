@@ -1,4 +1,5 @@
 import bpy
+import mathutils
 import re
 import json
 import os
@@ -226,12 +227,31 @@ class MavhodExportExecute(bpy.types.Operator):
 		world_matrix = obj.matrix_world
 		loc, rot_quat, scale = world_matrix.decompose()
 		
+		# Proper conversion from Z-up to Y-up
+		# M maps Godot basis to Blender basis:
+		# X_B = X_G
+		# Y_B = -Z_G
+		# Z_B = Y_G
+		M = mathutils.Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
+		M_inv = M.inverted()
+
+		# Transform Location
+		loc_G = M_inv.to_3x3() @ loc
+		
+		# Transform Rotation
+		R_B = rot_quat.to_matrix().to_4x4()
+		R_G = M_inv @ R_B @ M
+		rot_quat_G = R_G.to_quaternion()
+		
+		# Transform Scale
+		scale_G = mathutils.Vector((scale.x, scale.z, scale.y))
+		
 		data = {
 			"name": obj.name,
 			"asset_path": get_robust_relpath(final_path, self._export_scene_path),
-			"location": {"x": loc.x, "y": loc.y, "z": loc.z},
-			"rotation": {"x": rot_quat.x, "y": rot_quat.y, "z": rot_quat.z, "w": rot_quat.w},
-			"scale": {"x": scale.x, "y": scale.y, "z": scale.z}
+			"location": {"x": loc_G.x, "y": loc_G.y, "z": loc_G.z},
+			"rotation": {"x": rot_quat_G.x, "y": rot_quat_G.y, "z": rot_quat_G.z, "w": rot_quat_G.w},
+			"scale": {"x": scale_G.x, "y": scale_G.y, "z": scale_G.z}
 		}
 		
 		if props.export_metadata_instance:
