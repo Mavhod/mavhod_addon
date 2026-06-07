@@ -73,26 +73,8 @@ def main():
         export_extras=use_extras
     )
 
-    # 4. Post-process GLTF
-    from export_utils import patch_gltf_output
-    metadata_settings = {
-        'node': args.metadata_node,
-        'mesh': args.metadata_mesh,
-        'material': args.metadata_material,
-        'scene': args.metadata_scene
-    }
-    # For background export, image_metadata is not passed in from parent yet,
-    # but patch_gltf_output can handle it if we adapt.
-    # Actually, export_bg.py does its own copy_and_hash_images.
-    # We should pass info to patch_gltf_output to fix image uris if needed.
-    
-    # Let's fix image_metadata for patch_gltf_output
-    # Wait, copy_and_hash_images in export_utils returns { image_name: hashed_full_path }
-    # patch_gltf_output expects { hash_name: { dst_path } }
-    
-    # We can reconstruct it or update patch_gltf_output.
-    # Given the complexity, let's keep it simple for now.
-    patch_gltf_output(args.output, metadata_settings, object_ext=args.object_ext)
+    # 4. Post-processing is now handled by the main process in export_scene.py
+    # to ensure texture metadata is correctly applied.
 
 if __name__ == "__main__":
     main()

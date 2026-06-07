@@ -202,15 +202,15 @@ class MavhodExportExecute(bpy.types.Operator):
 				for i, mat in enumerate(original_materials):
 					obj.data.materials[i] = mat
 			
-			# 2. Patch and Filter output using utility
-			from .export_utils import patch_gltf_output
-			metadata_settings = {
-				'node': props.export_metadata_node,
-				'mesh': props.export_metadata_mesh,
-				'material': props.export_metadata_material,
-				'scene': props.export_metadata_scene
-			}
-			patch_gltf_output(dst_path, metadata_settings, image_metadata, object_ext)
+		# 2. Patch and Filter output using utility (for both Local and Linked)
+		from .export_utils import patch_gltf_output
+		metadata_settings = {
+			'node': props.export_metadata_node,
+			'mesh': props.export_metadata_mesh,
+			'material': props.export_metadata_material,
+			'scene': props.export_metadata_scene
+		}
+		patch_gltf_output(dst_path, metadata_settings, image_metadata, object_ext)
 
 
 	def _get_mesh_instance_data(self, obj, path_info):
