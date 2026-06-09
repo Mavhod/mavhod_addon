@@ -21,12 +21,14 @@ if "bpy" in locals():
 	from . import create_convex
 	from . import export_setting
 	from . import export_scene
+	from . import export_light
 	imp.reload(import_fbx)
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
 	imp.reload(create_convex)
 	imp.reload(export_setting)
 	imp.reload(export_scene)
+	imp.reload(export_light)
 else:
 	from . import import_fbx
 	from . import import_gltf
@@ -34,6 +36,7 @@ else:
 	from . import create_convex
 	from . import export_setting
 	from . import export_scene
+	from . import export_light
 
 import bpy
 
@@ -81,6 +84,7 @@ class MavhodToolSceneProps(bpy.types.PropertyGroup):
 	export_metadata_scene: bpy.props.BoolProperty(name="Scene (glTF)", default=True)
 	export_metadata_instance: bpy.props.BoolProperty(name="Instance (JSON)", default=True)
 	export_metadata_level: bpy.props.BoolProperty(name="Level (JSON)", default=True)
+	export_metadata_light: bpy.props.BoolProperty(name="Light (JSON)", default=True)
 	scene_extension: bpy.props.StringProperty(
 		name="Scene Extension",
 		description="File extension for the exported scene data",
@@ -90,6 +94,11 @@ class MavhodToolSceneProps(bpy.types.PropertyGroup):
 		name="Object Extension",
 		description="File extension for exported objects",
 		default=".gltf"
+	)
+	light_extension: bpy.props.StringProperty(
+		name="Light Extension",
+		description="File extension for exported light data",
+		default=".json"
 	)
 	fbx_files: bpy.props.CollectionProperty(type=FBXFileItem)
 	path_pairs: bpy.props.CollectionProperty(type=MavhodPathPair)
@@ -119,6 +128,7 @@ class MavhodToolPanel(bpy.types.Panel):
 		col = box.column(align=True)
 		col.operator("mavhod_tool.export_setting", text="Setting", icon="PRESET")
 		col.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
+		col.operator("mavhod_tool.export_light_settings", text="Export Light", icon="LIGHT_DATA")
 
 		# ========== MESH TOOLS SECTION ==========
 		box = layout.box()
@@ -141,6 +151,8 @@ classes = (
 	export_setting.MavhodExportSetting,
 	export_setting.MavhodLoadSettingsJSON,
 	export_setting.MavhodSaveSettingsJSON,
+	export_light.MavhodExportLightSettings,
+	export_light.MavhodExportLightExecute,
 	export_scene.MavhodExportSettings,
 	export_scene.MavhodExportExecute,
 	MavhodToolPanel,

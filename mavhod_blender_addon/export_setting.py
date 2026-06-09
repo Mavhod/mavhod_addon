@@ -44,6 +44,7 @@ class MavhodSaveSettingsJSON(bpy.types.Operator, ExportHelper):
         data = {
             "scene_extension": props.scene_extension,
             "object_extension": props.object_extension,
+            "light_extension": props.light_extension,
             "path_pairs": [],
             "export_metadata": {
                 "metadata_node": props.export_metadata_node,
@@ -51,7 +52,8 @@ class MavhodSaveSettingsJSON(bpy.types.Operator, ExportHelper):
                 "metadata_material": props.export_metadata_material,
                 "metadata_scene": props.export_metadata_scene,
                 "metadata_instance": props.export_metadata_instance,
-                "metadata_level": props.export_metadata_level
+                "metadata_level": props.export_metadata_level,
+                "metadata_light": props.export_metadata_light
             }
         }
         for pair in props.path_pairs:
@@ -104,6 +106,8 @@ class MavhodLoadSettingsJSON(bpy.types.Operator, ImportHelper):
                 props.scene_extension = data["scene_extension"]
             if "object_extension" in data:
                 props.object_extension = data["object_extension"]
+            if "light_extension" in data:
+                props.light_extension = data["light_extension"]
             
             if "export_metadata" in data:
                 tex_data = data["export_metadata"]
@@ -113,6 +117,7 @@ class MavhodLoadSettingsJSON(bpy.types.Operator, ImportHelper):
                 props.export_metadata_scene = tex_data.get("metadata_scene", True)
                 props.export_metadata_instance = tex_data.get("metadata_instance", True)
                 props.export_metadata_level = tex_data.get("metadata_level", True)
+                props.export_metadata_light = tex_data.get("metadata_light", True)
             
             self.report({'INFO'}, f"Loaded settings from {self.filepath}")
         except Exception as e:
@@ -137,7 +142,9 @@ class MavhodExportSetting(bpy.types.Operator):
         layout.label(text="Configure Source and Destination Paths:")
         
         col_ext = layout.column(align=True)
+        col_ext.prop(props, "scene_extension", text="Scene Extension")
         col_ext.prop(props, "object_extension", text="Object Extension")
+        col_ext.prop(props, "light_extension", text="Light Extension")
         
         layout.label(text="Export Metadata:")
         box_meta = layout.box()
@@ -154,6 +161,7 @@ class MavhodExportSetting(bpy.types.Operator):
         row_meta2 = col_meta.row(align=True)
         row_meta2.prop(props, "export_metadata_instance", text="Instance")
         row_meta2.prop(props, "export_metadata_level", text="Level (Global)")
+        row_meta2.prop(props, "export_metadata_light", text="Light")
         
         layout.separator()
         
@@ -175,6 +183,9 @@ class MavhodExportSetting(bpy.types.Operator):
         row = layout.row(align=True)
         row.operator("mavhod_tool.load_settings_json", text="Load", icon="FILE_FOLDER")
         row.operator("mavhod_tool.save_settings_json", text="Save", icon="FILE_TICK")
+
+        layout.separator()
+        layout.operator("mavhod_tool.export_light_settings", text="Export Light", icon="LIGHT_DATA")
 
     def execute(self, context):
         # This operator currently just manages the collection via the dialog.

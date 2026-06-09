@@ -1,12 +1,11 @@
 import bpy
-import mathutils
 import re
 import json
 import os
 import shutil
 import hashlib
 import subprocess
-from .export_utils import copy_and_hash_images, rebind_materials_to_hashed_images
+from .export_utils import copy_and_hash_images, rebind_materials_to_hashed_images, convert_zup_to_yup
 from bpy_extras.io_utils import ExportHelper
 
 def get_robust_relpath(target_path, base_path):
@@ -226,25 +225,7 @@ class MavhodExportExecute(bpy.types.Operator):
 		
 		world_matrix = obj.matrix_world
 		loc, rot_quat, scale = world_matrix.decompose()
-		
-		# Proper conversion from Z-up to Y-up
-		# M maps Godot basis to Blender basis:
-		# X_B = X_G
-		# Y_B = -Z_G
-		# Z_B = Y_G
-		M = mathutils.Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
-		M_inv = M.inverted()
-
-		# Transform Location
-		loc_G = M_inv.to_3x3() @ loc
-		
-		# Transform Rotation
-		R_B = rot_quat.to_matrix().to_4x4()
-		R_G = M_inv @ R_B @ M
-		rot_quat_G = R_G.to_quaternion()
-		
-		# Transform Scale
-		scale_G = mathutils.Vector((scale.x, scale.z, scale.y))
+		loc_G, rot_quat_G, scale_G = convert_zup_to_yup(loc, rot_quat, scale)
 		
 		data = {
 			"name": obj.name,
@@ -353,9 +334,9 @@ class MavhodExportExecute(bpy.types.Operator):
 		try:
 			# Create Save folder if it doesn't exist
 			os.makedirs(self._export_scene_path, exist_ok=True)
-			
+
 			scene_data = {"instances": self._mesh_data_for_json}
-			
+
 			props = context.scene.MavhodToolProps
 			if props.export_metadata_level:
 				level_extras = {}
@@ -367,7 +348,7 @@ class MavhodExportExecute(bpy.types.Operator):
 					level_extras[key] = val
 				if level_extras:
 					scene_data["metadata"] = level_extras
-			
+
 			with open(self.filepath, 'w', encoding='utf-8') as f:
 				json.dump(scene_data, f, indent=4)
 		except Exception as e:
