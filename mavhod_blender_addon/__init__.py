@@ -19,6 +19,7 @@ if "bpy" in locals():
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
+	from . import rename_mesh
 	from . import export_setting
 	from . import export_scene
 	from . import export_light
@@ -26,6 +27,7 @@ if "bpy" in locals():
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
 	imp.reload(create_convex)
+	imp.reload(rename_mesh)
 	imp.reload(export_setting)
 	imp.reload(export_scene)
 	imp.reload(export_light)
@@ -34,6 +36,7 @@ else:
 	from . import import_gltf
 	from . import arrange_meshes
 	from . import create_convex
+	from . import rename_mesh
 	from . import export_setting
 	from . import export_scene
 	from . import export_light
@@ -137,6 +140,7 @@ class MavhodToolPanel(bpy.types.Panel):
 		col = box.column(align=True)
 		col.operator("mavhod_tool.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
 		col.operator("mavhod_tool.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
+		col.operator("mavhod_tool.rename_mesh_to_object", text="Mesh to Object", icon="FONT_DATA")
 
 classes = (
 	FBXFileItem,
@@ -146,6 +150,7 @@ classes = (
 	import_gltf.ImportGLTFFiles,
 	arrange_meshes.ArrangeSelectedMeshes,
 	create_convex.CreateConvexHull,
+	rename_mesh.RenameMeshToObject,
 	export_setting.MavhodAddPathPair,
 	export_setting.MavhodRemovePathPair,
 	export_setting.MavhodExportSetting,
