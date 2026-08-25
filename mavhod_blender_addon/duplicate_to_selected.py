@@ -16,7 +16,7 @@ class DuplicateToSelected(bpy.types.Operator):
     linked_duplicates: bpy.props.BoolProperty(
         name="Linked Duplicates",
         description="Create linked duplicates (share object data block like Alt+D)",
-        default=False
+        default=True
     )
 
     def execute(self, context):
@@ -38,6 +38,13 @@ class DuplicateToSelected(bpy.types.Operator):
             self.report({'WARNING'}, "No target objects selected. Please select other objects to place duplicates on")
             return {'CANCELLED'}
 
+        # Determine if we should create a linked duplicate.
+        # We create a linked duplicate if the user requested it, or if the source object's
+        # data is already shared (users > 1).
+        is_linked = self.linked_duplicates
+        if active_obj.data and active_obj.data.users > 1:
+            is_linked = True
+
         duplicated_objects = []
 
         # Duplicate active object at the location of each target
@@ -46,7 +53,7 @@ class DuplicateToSelected(bpy.types.Operator):
             new_obj = active_obj.copy()
 
             # If not linking duplicates, duplicate the underlying data block (mesh, curve, light, etc.)
-            if not self.linked_duplicates and new_obj.data:
+            if not is_linked and new_obj.data:
                 new_obj.data = new_obj.data.copy()
 
             # Align world transform
