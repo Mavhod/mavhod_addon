@@ -184,9 +184,6 @@ class MavhodExportSetting(bpy.types.Operator):
         row.operator("mavhod_tool.load_settings_json", text="Load", icon="FILE_FOLDER")
         row.operator("mavhod_tool.save_settings_json", text="Save", icon="FILE_TICK")
 
-        layout.separator()
-        layout.operator("mavhod_tool.export_light_settings", text="Export Light", icon="LIGHT_DATA")
-
     def execute(self, context):
         # This operator currently just manages the collection via the dialog.
         # Additional processing can be added here if needed.

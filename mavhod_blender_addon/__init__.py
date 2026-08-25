@@ -23,6 +23,7 @@ if "bpy" in locals():
 	from . import export_setting
 	from . import export_scene
 	from . import export_light
+	from . import duplicate_to_selected
 	imp.reload(import_fbx)
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
@@ -31,6 +32,7 @@ if "bpy" in locals():
 	imp.reload(export_setting)
 	imp.reload(export_scene)
 	imp.reload(export_light)
+	imp.reload(duplicate_to_selected)
 else:
 	from . import import_fbx
 	from . import import_gltf
@@ -40,6 +42,7 @@ else:
 	from . import export_setting
 	from . import export_scene
 	from . import export_light
+	from . import duplicate_to_selected
 
 import bpy
 
@@ -141,6 +144,7 @@ class MavhodToolPanel(bpy.types.Panel):
 		col.operator("mavhod_tool.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
 		col.operator("mavhod_tool.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
 		col.operator("mavhod_tool.rename_mesh_to_object", text="Mesh to Object", icon="FONT_DATA")
+		col.operator("mavhod_tool.duplicate_to_selected", text="Duplicate to Selected", icon="DUPLICATE")
 
 classes = (
 	FBXFileItem,
@@ -151,6 +155,7 @@ classes = (
 	arrange_meshes.ArrangeSelectedMeshes,
 	create_convex.CreateConvexHull,
 	rename_mesh.RenameMeshToObject,
+	duplicate_to_selected.DuplicateToSelected,
 	export_setting.MavhodAddPathPair,
 	export_setting.MavhodRemovePathPair,
 	export_setting.MavhodExportSetting,
