@@ -12,14 +12,14 @@ _YUP_MATRIX = mathutils.Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0
 _YUP_MATRIX_INV = _YUP_MATRIX.inverted()
 
 def convert_zup_to_yup(loc, rot_quat, scale):
-	"""Convert Blender Z-up transform to Y-up (Godot-style).
-	Returns (loc_G, rot_quat_G, scale_G) as dict-compatible vectors."""
-	loc_G = _YUP_MATRIX_INV.to_3x3() @ loc
-	R_B = rot_quat.to_matrix().to_4x4()
-	R_G = _YUP_MATRIX_INV @ R_B @ _YUP_MATRIX
-	rot_quat_G = R_G.to_quaternion()
-	scale_G = mathutils.Vector((scale.x, scale.z, scale.y))
-	return loc_G, rot_quat_G, scale_G
+    """Convert Blender Z-up transform to Y-up (Godot-style).
+    Returns (loc_G, rot_quat_G, scale_G) as dict-compatible vectors."""
+    loc_G = _YUP_MATRIX_INV.to_3x3() @ loc
+    R_B = rot_quat.to_matrix().to_4x4()
+    R_G = _YUP_MATRIX_INV @ R_B @ _YUP_MATRIX
+    rot_quat_G = R_G.to_quaternion()
+    scale_G = mathutils.Vector((scale.x, scale.z, scale.y))
+    return loc_G, rot_quat_G, scale_G
 
 def get_robust_relpath(target_path, base_path):
     """
@@ -159,9 +159,9 @@ def copy_and_hash_images(output_dir):
             continue
             
         # Get real file path
-        abs_path = bpy.path.abspath(img.filepath)
+        abs_path = bpy.path.abspath(img.filepath, library=img.library)
         real_path = os.path.realpath(abs_path)
-        
+
         if not os.path.isfile(real_path):
             print(f"Warning: Image file not found: {real_path}")
             continue
