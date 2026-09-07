@@ -24,6 +24,7 @@ if "bpy" in locals():
 	from . import export_scene
 	from . import export_light
 	from . import duplicate_to_selected
+	from . import create_double_sided
 	imp.reload(import_fbx)
 	imp.reload(import_gltf)
 	imp.reload(arrange_meshes)
@@ -33,6 +34,7 @@ if "bpy" in locals():
 	imp.reload(export_scene)
 	imp.reload(export_light)
 	imp.reload(duplicate_to_selected)
+	imp.reload(create_double_sided)
 else:
 	from . import import_fbx
 	from . import import_gltf
@@ -43,6 +45,7 @@ else:
 	from . import export_scene
 	from . import export_light
 	from . import duplicate_to_selected
+	from . import create_double_sided
 
 import bpy
 
@@ -115,36 +118,43 @@ class MavhodToolPanel(bpy.types.Panel):
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "UI"
 	bl_category = "Mavhod"
-	bl_context = "objectmode"
 
 	def draw(self, context):
 		layout = self.layout
 		
-		# ========== IMPORT SECTION ==========
-		box = layout.box()
-		box.label(text="Import", icon="IMPORT")
-		
-		col = box.column(align=True)
-		col.operator("mavhod_tool.import_fbx_files", text="Import FBX", icon="FILE_3D")
-		col.operator("mavhod_tool.import_gltf_files", text="Import GLTF/GLB", icon="FILE_3D")
-		
-		# ========== EXPORT SECTION ==========
-		box = layout.box()
-		box.label(text="Export", icon="EXPORT")
-		col = box.column(align=True)
-		col.operator("mavhod_tool.export_setting", text="Setting", icon="PRESET")
-		col.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
-		col.operator("mavhod_tool.export_light_settings", text="Export Light", icon="LIGHT_DATA")
+		if context.mode.startswith('EDIT'):
+			# ========== EDIT MODE TOOLS SECTION ==========
+			box = layout.box()
+			box.label(text="Edit Mode Tools", icon="EDITMODE_HLT")
+			
+			col = box.column(align=True)
+			col.operator("mavhod_tool.create_double_sided", text="Create Double Sided", icon="FACESEL")
+		else:
+			# ========== IMPORT SECTION ==========
+			box = layout.box()
+			box.label(text="Import", icon="IMPORT")
+			
+			col = box.column(align=True)
+			col.operator("mavhod_tool.import_fbx_files", text="Import FBX", icon="FILE_3D")
+			col.operator("mavhod_tool.import_gltf_files", text="Import GLTF/GLB", icon="FILE_3D")
+			
+			# ========== EXPORT SECTION ==========
+			box = layout.box()
+			box.label(text="Export", icon="EXPORT")
+			col = box.column(align=True)
+			col.operator("mavhod_tool.export_setting", text="Setting", icon="PRESET")
+			col.operator("mavhod_tool.export_settings", text="Export Scene", icon="EXPORT")
+			col.operator("mavhod_tool.export_light_settings", text="Export Light", icon="LIGHT_DATA")
 
-		# ========== MESH TOOLS SECTION ==========
-		box = layout.box()
-		box.label(text="Mesh Tools", icon="MESH_DATA")
-		
-		col = box.column(align=True)
-		col.operator("mavhod_tool.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
-		col.operator("mavhod_tool.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
-		col.operator("mavhod_tool.rename_mesh_to_object", text="Mesh to Object", icon="FONT_DATA")
-		col.operator("mavhod_tool.duplicate_to_selected", text="Duplicate to Selected", icon="DUPLICATE")
+			# ========== MESH TOOLS SECTION ==========
+			box = layout.box()
+			box.label(text="Mesh Tools", icon="MESH_DATA")
+			
+			col = box.column(align=True)
+			col.operator("mavhod_tool.arrange_selected_meshes", text="Arrange Selected", icon="GRID")
+			col.operator("mavhod_tool.create_convex_hull", text="Create Convex Hull", icon="MESH_ICOSPHERE")
+			col.operator("mavhod_tool.rename_mesh_to_object", text="Mesh to Object", icon="FONT_DATA")
+			col.operator("mavhod_tool.duplicate_to_selected", text="Duplicate to Selected", icon="DUPLICATE")
 
 classes = (
 	FBXFileItem,
@@ -156,6 +166,7 @@ classes = (
 	create_convex.CreateConvexHull,
 	rename_mesh.RenameMeshToObject,
 	duplicate_to_selected.DuplicateToSelected,
+	create_double_sided.CreateDoubleSided,
 	export_setting.MavhodAddPathPair,
 	export_setting.MavhodRemovePathPair,
 	export_setting.MavhodExportSetting,
